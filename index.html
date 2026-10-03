@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Libro Gallina Alacantina (ESGA025)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SDK Oficial Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-20">
+
+  <!-- Header del Club -->
+  <header class="bg-blue-800 text-white p-4 shadow-md sticky top-0 z-50">
+    <div class="max-w-xl mx-auto flex justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-800 font-bold text-xs shadow overflow-hidden flex-shrink-0">
+          <img src="logo.png" alt="Club Gallina Alacantina" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <span class="hidden">ACGA</span>
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-tight">Gallina Alacantina</h1>
+          <p class="text-[11px] text-blue-200">Asociación Club Gallina Alacantina • ESGA025</p>
+        </div>
+      </div>
+      <button id="btn-logout" onclick="cerrarSesion()" class="hidden text-xs bg-blue-950 hover:bg-blue-900 px-3 py-1.5 rounded-lg font-semibold transition">Salir</button>
+    </div>
+  </header>
+
+  <!-- Navegación Inferior / 3 Pestañas -->
+  <nav id="nav-tabs" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
+    <div class="max-w-xl mx-auto flex justify-around text-center">
+      <button onclick="cambiarPestana('censo')" id="tab-btn-censo" class="flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1">
+        <span>🐓</span> Censo & Registro
+      </button>
+      <button onclick="cambiarPestana('estandar')" id="tab-btn-estandar" class="flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1">
+        <span>📖</span> Estándar ESGA025
+      </button>
+      <button onclick="cambiarPestana('club')" id="tab-btn-club" class="flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1">
+        <span>🌐</span> El Club
+      </button>
+    </div>
+  </nav>
+
+  <main class="max-w-xl mx-auto p-4 space-y-6">
+
+    <!-- AUTENTICACIÓN -->
+    <section id="sec-auth" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+      <h2 class="text-md font-bold text-slate-900 border-b pb-2">Acceso para Criadores e Inspectores</h2>
+      
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">CORREO ELECTRÓNICO</label>
+        <input type="email" id="auth-email" placeholder="criador@ejemplo.com" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">CONTRASEÑA</label>
+        <input type="password" id="auth-password" placeholder="******" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="btn-login" type="button" class="flex-1 bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm hover:bg-blue-800 transition shadow-sm">Iniciar Sesión</button>
+        <button id="btn-signup" type="button" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-lg text-sm hover:bg-slate-200 transition border border-slate-300">Registrarse</button>
+      </div>
+      <p id="auth-msg" class="text-xs text-center font-semibold mt-2 min-h-[20px]"></p>
+    </section>
+
+    <!-- PESTAÑA 1: CENSO Y REGISTRO -->
+    <div id="tab-censo" class="hidden space-y-6">
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-md font-bold mb-4 text-slate-900 flex items-center gap-2">
+          <span>🐓</span> Registrar Ejemplar en Censo
+        </h2>
+        <form id="form-ejemplar" class="space-y-4">
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">NÚMERO DE ANILLA *</label>
+            <input type="text" id="anilla" placeholder="Ej: ESGA025-2026-001" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">SEXO *</label>
+              <select id="sexo" class="w-full p-2 border rounded-lg text-sm bg-white">
+                <option value="Gallo">Gallo (Anilla 20 mm)</option>
+                <option value="Gallina">Gallina (Anilla 18 mm)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">PESO (Gramos)</label>
+              <input type="number" id="peso" placeholder="3200" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">VARIEDAD DE COLOR *</label>
+            <select id="variedad" class="w-full p-2 border rounded-lg text-sm bg-white">
+              <optgroup label="Reconocidas FESACOCUR">
+                <option value="Blanco">Blanco</option>
+                <option value="Negro Moteado">Negro Moteado</option>
+                <option value="Pinto/Exchequer">Pinto / Exchequer</option>
+              </optgroup>
+              <optgroup label="En proceso FESACOCUR">
+                <option value="Armiñada en negro">Armiñada en negro</option>
+                <option value="Milflores">Milflores</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-sm">
+            Guardar en Base de Datos Central
+          </button>
+        </form>
+      </section>
+
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-md font-bold text-slate-900">📜 Mis Ejemplares Registrados</h2>
+          <button id="btn-refresh" type="button" class="text-xs bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded font-semibold text-slate-700 border">🔄 Actualizar</button>
+        </div>
+        <div id="lista-ejemplares" class="space-y-3 text-xs text-slate-500">
+          Cargando datos...
+        </div>
+      </section>
+
+    </div>
+
+    <!-- PESTAÑA 2: ESTÁNDAR RACIAL -->
+    <div id="tab-estandar" class="hidden space-y-4">
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <h2 class="text-md font-bold text-blue-900 border-b pb-2 flex items-center justify-between">
+          <span>📋 Estándar Oficial ESGA025</span>
+          <span class="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded">FESACOCUR</span>
+        </h2>
+        
+        <div class="text-xs space-y-2 text-slate-700 leading-relaxed">
+          <p><strong>Origen:</strong> Provincia de Alicante (Comunidad Valenciana).</p>
+          <p><strong>Características Generales:</strong> Aves rústicas, semipesadas, de cresta sencilla y orejillas blancas. Tienen tarso amarillo con ligera pigmentación según la variedad.</p>
+
+          <div class="border-t pt-2 mt-2">
+            <p class="font-bold text-slate-900">Diámetro de Anillas:</p>
+            <ul class="list-disc pl-5 text-slate-600">
+              <li>Gallo: 20 mm</li>
+              <li>Gallina: 18 mm</li>
+            </ul>
+          </div>
+
+          <div class="border-t pt-2">
+            <p class="font-bold text-slate-900">Pesos Orientativos:</p>
+            <ul class="list-disc pl-5 text-slate-600">
+              <li>Gallo: 3,0 kg a 3,5 kg</li>
+              <li>Gallina: 2,2 kg a 2,6 kg</li>
+            </ul>
+          </div>
+
+          <div class="border-t pt-2">
+            <p class="font-bold text-slate-900">Variedades de Plumaje:</p>
+            <ul class="list-disc pl-5 text-slate-600">
+              <li>Blanco</li>
+              <li>Negro Moteado</li>
+              <li>Pinto / Exchequer</li>
+              <li>Armiñada en negro</li>
+              <li>Milflores</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PESTAÑA 3: EL CLUB & ENLACES -->
+    <div id="tab-club" class="hidden space-y-4">
+      <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+        <h2 class="text-md font-bold text-blue-900 border-b pb-2">Asociación Club Gallina Alacantina</h2>
+        
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Entidad dedicada al fomento, selección, conservación y reconocimiento oficial de la raza avícola Gallina Alacantina.
+        </p>
+
+        <div class="space-y-3 pt-2">
+          <!-- Botón Web -->
+          <a href="https://www.clubalacantina.com/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-300 transition group">
+            <div class="flex items-center gap-3">
+              <span class="text-xl">🌐</span>
+              <div>
+                <p class="text-xs font-bold text-slate-800 group-hover:text-blue-700">Página Web Oficial</p>
+                <p class="text-[10px] text-slate-500">clubalacantina.com</p>
+              </div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-blue-700 font-bold">→</span>
+          </a>
+
+          <!-- Botón YouTube -->
+          <a href="https://www.youtube.com/channel/UCiW1IoJmsL_f55NOdAKWuRw" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 hover:bg-red-50 hover:border-red-300 transition group">
+            <div class="flex items-center gap-3">
+              <span class="text-xl">🎥</span>
+              <div>
+                <p class="text-xs font-bold text-slate-800 group-hover:text-red-600">Canal de YouTube</p>
+                <p class="text-[10px] text-slate-500">Vídeos, monográficas y divulgación</p>
+              </div>
+            </div>
+            <span class="text-xs text-slate-400 group-hover:text-red-600 font-bold">→</span>
+          </a>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://htbyipavphxcehdwrjbl.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0YnlpcGF2cGh4Y2VoZHdyamJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjQyOTEsImV4cCI6MjEwNjYwMDI5MX0.tnBJERxhI3YbwSOFVkeBvvz5qm6FNxzBZ8_5S-UKoQM";
+    
+    let db = null;
+    let usuarioActual = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        if (window.supabase) {
+          db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          comprobarSesion();
+        } else {
+          document.getElementById('auth-msg').textContent = "Error: No se pudo conectar con el servidor.";
+        }
+      } catch (e) {
+        document.getElementById('auth-msg').textContent = "Error de conexión: " + e.message;
+      }
+
+      document.getElementById('btn-signup').addEventListener('click', registrarse);
+      document.getElementById('btn-login').addEventListener('click', iniciarSesion);
+      document.getElementById('form-ejemplar').addEventListener('submit', guardarEjemplar);
+      document.getElementById('btn-refresh').addEventListener('click', cargarCenso);
+    });
+
+    function cambiarPestana(pestana) {
+      const tabCenso = document.getElementById('tab-censo');
+      const tabEstandar = document.getElementById('tab-estandar');
+      const tabClub = document.getElementById('tab-club');
+
+      const btnCenso = document.getElementById('tab-btn-censo');
+      const btnEstandar = document.getElementById('tab-btn-estandar');
+      const btnClub = document.getElementById('tab-btn-club');
+
+      // Ocultar todas
+      tabCenso.classList.add('hidden');
+      tabEstandar.classList.add('hidden');
+      tabClub.classList.add('hidden');
+
+      // Estilos inactivos por defecto
+      btnCenso.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
+      btnEstandar.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
+      btnClub.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
+
+      // Activar la seleccionada
+      if (pestana === 'censo') {
+        tabCenso.classList.remove('hidden');
+        btnCenso.className = "flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1";
+      } else if (pestana === 'estandar') {
+        tabEstandar.classList.remove('hidden');
+        btnEstandar.className = "flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1";
+      } else if (pestana === 'club') {
+        tabClub.classList.remove('hidden');
+        btnClub.className = "flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1";
+      }
+    }
+
+    async function comprobarSesion() {
+      if (!db) return;
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        usuarioActual = session.user;
+        document.getElementById('sec-auth').classList.add('hidden');
+        document.getElementById('nav-tabs').classList.remove('hidden');
+        document.getElementById('tab-censo').classList.remove('hidden');
+        document.getElementById('btn-logout').classList.remove('hidden');
+        cargarCenso();
+      } else {
+        document.getElementById('sec-auth').classList.remove('hidden');
+        document.getElementById('nav-tabs').classList.add('hidden');
+        document.getElementById('tab-censo').classList.add('hidden');
+        document.getElementById('tab-estandar').classList.add('hidden');
+        document.getElementById('tab-club').classList.add('hidden');
+        document.getElementById('btn-logout').classList.add('hidden');
+      }
+    }
+
+    async function registrarse() {
+      const msg = document.getElementById('auth-msg');
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+
+      if (!email || !password) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Introduce correo y contraseña.";
+        return;
+      }
+
+      msg.style.color = "#2563eb";
+      msg.textContent = "Procesando registro...";
+
+      try {
+        const { data, error } = await db.auth.signUp({ email, password });
+        if (error) {
+          msg.style.color = "#dc2626";
+          msg.textContent = "Error: " + error.message;
+        } else {
+          msg.style.color = "#16a34a";
+          msg.textContent = "¡Registro correcto! Inicia sesión ahora.";
+        }
+      } catch (err) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Error inesperado: " + err.message;
+      }
+    }
+
+    async function iniciarSesion() {
+      const msg = document.getElementById('auth-msg');
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+
+      if (!email || !password) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Introduce correo y contraseña.";
+        return;
+      }
+
+      msg.style.color = "#2563eb";
+      msg.textContent = "Iniciando sesión...";
+
+      try {
+        const { data, error } = await db.auth.signInWithPassword({ email, password });
+        if (error) {
+          msg.style.color = "#dc2626";
+          msg.textContent = "Error: " + error.message;
+        } else {
+          msg.textContent = "";
+          comprobarSesion();
+        }
+      } catch (err) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Error inesperado: " + err.message;
+      }
+    }
+
+    async function cerrarSesion() {
+      if (db) await db.auth.signOut();
+      comprobarSesion();
+    }
+
+    async function guardarEjemplar(e) {
+      e.preventDefault();
+      const sexo = document.getElementById('sexo').value;
+      
+      const nuevoAnimal = {
+        anilla: document.getElementById('anilla').value,
+        sexo: sexo,
+        diametro_anilla: sexo === 'Gallo' ? 20 : 18,
+        peso_gramos: parseInt(document.getElementById('peso').value) || null,
+        variedad_color: document.getElementById('variedad').value,
+        id_criador: usuarioActual.id
+      };
+
+      const { data, error } = await db.from('ejemplares').insert([nuevoAnimal]);
+
+      if (error) {
+        alert("Error al guardar: " + error.message);
+      } else {
+        alert("Ejemplar registrado correctamente.");
+        document.getElementById('form-ejemplar').reset();
+        cargarCenso();
+      }
+    }
+
+    async function cargarCenso() {
+      const contenedor = document.getElementById('lista-ejemplares');
+      contenedor.innerHTML = "Cargando censo...";
+
+      const { data, error } = await db.from('ejemplares').select('*').order('creado_el', { ascending: false });
+
+      if (error) {
+        contenedor.innerHTML = "Error al obtener registros: " + error.message;
+        return;
+      }
+
+      if (data.length === 0) {
+        contenedor.innerHTML = "No tienes ningún ejemplar registrado aún.";
+        return;
+      }
+
+      contenedor.innerHTML = '';
+      data.forEach(el => {
+        contenedor.innerHTML += `
+          <div class="p-3 border rounded-lg bg-slate-50 flex justify-between items-start">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-900 text-sm">${el.anilla}</span>
+                <span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-blue-100 text-blue-800 border-blue-200">${el.estado_prelibro}</span>
+              </div>
+              <p class="text-slate-600 mt-1"><strong>Variedad:</strong> ${el.variedad_color}</p>
+              <p class="text-slate-500"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Peso:</strong> ${el.peso_gramos || 'Sin registrar'} g</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+  </script>
+</body>
+</html>
