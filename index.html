@@ -11,10 +11,14 @@
     .touch-target {
       min-height: 48px;
     }
+    /* Estilos específicos para impresión */
     @media print {
-      body * { visibility: hidden; }
+      body { background-color: #ffffff !important; color: #000000 !important; }
+      header, nav, #sec-auth, #form-ejemplar, .no-imprimir { display: none !important; }
       #areaImpresion, #areaImpresion * { visibility: visible; }
-      #areaImpresion { position: absolute; left: 0; top: 0; width: 100%; }
+      #areaImpresion { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 0; }
+      .tabla-impresion th, .tabla-impresion td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; font-size: 11px; }
+      .tabla-impresion { width: 100%; border-collapse: collapse; margin-top: 15px; }
     }
   </style>
 </head>
@@ -238,6 +242,79 @@
       </section>
     </div>
 
+    <!-- PESTAÑA 5: AJUSTES E IMPRESIÓN DE LISTADOS -->
+    <div id="tab-ajustes" class="hidden space-y-6">
+      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+        <div class="border-b border-slate-800 pb-3">
+          <h2 class="text-base font-bold text-blue-400 flex items-center gap-2">
+            <span>⚙️</span> Ajustes e Informes
+          </h2>
+          <p class="text-xs text-slate-400">Generación e impresión de censos oficiales</p>
+        </div>
+
+        <!-- Filtros de Generación de Reporte -->
+        <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+          <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Filtros del Listado</h3>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">ESTADO LIBRO</label>
+              <select id="filtro-estado" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
+                <option value="TODOS">Todos los estados</option>
+                <option value="Inscrito Oficial">Inscritos Oficiales</option>
+                <option value="Pendiente">Pendientes de revisión</option>
+                <option value="Rechazado">Rechazados</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">SEXO</label>
+              <select id="filtro-sexo" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
+                <option value="TODOS">Macho y Hembra</option>
+                <option value="Gallo">Gallos</option>
+                <option value="Gallina">Gallinas</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 mb-1">VARIEDAD DE COLOR</label>
+            <select id="filtro-variedad" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
+              <option value="TODOS">Todas las variedades</option>
+              <option value="Blanco">Blanco</option>
+              <option value="Negro Moteado">Negro Moteado</option>
+              <option value="Pinto/Exchequer">Pinto / Exchequer</option>
+              <option value="Armiñada en negro">Armiñada en negro</option>
+              <option value="Milflores">Milflores</option>
+            </select>
+          </div>
+
+          <!-- Filtro de alcance (Solo visible o modificable si es admin) -->
+          <div id="div-filtro-alcance" class="pt-2 border-t border-slate-800">
+            <label class="block text-[11px] font-semibold text-amber-400 mb-1">ALCANCE DEL REPORTI</label>
+            <select id="filtro-alcance" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
+              <option value="MIS_ANIMALES">Solo mis ejemplares registrados</option>
+              <option value="TODOS_CRIADORES" id="opt-todos-criadores" class="hidden">Censo global de todos los criadores</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button onclick="generarReporte()" type="button" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md touch-target flex items-center justify-center gap-1.5">
+              <span>📋</span> Generar Vista Previa
+            </button>
+            <button onclick="imprimirListado()" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-md touch-target flex items-center gap-1.5">
+              <span>🖨️</span> Imprimir / PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Área interactiva e imprimible de la vista previa -->
+        <div id="areaImpresion" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
+          <p class="text-slate-400 text-center italic">Aplica los filtros requeridos y pulsa "Generar Vista Previa".</p>
+        </div>
+      </section>
+    </div>
+
   </main>
 
   <!-- NAVEGACIÓN INFERIOR (Ergonómica para manejo con el pulgar) -->
@@ -258,6 +335,10 @@
       <button onclick="cambiarPestana('gestion')" id="tab-btn-gestion" class="hidden flex-1 py-3 text-xs font-semibold text-amber-400 flex flex-col items-center gap-1 touch-target">
         <span class="text-lg">🛡️</span>
         <span>Gestión</span>
+      </button>
+      <button onclick="cambiarPestana('ajustes')" id="tab-btn-ajustes" class="flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target">
+        <span class="text-lg">⚙️</span>
+        <span>Ajustes</span>
       </button>
     </div>
   </nav>
@@ -303,21 +384,25 @@
       const tabEstandar = document.getElementById('tab-estandar');
       const tabClub = document.getElementById('tab-club');
       const tabGestion = document.getElementById('tab-gestion');
+      const tabAjustes = document.getElementById('tab-ajustes');
 
       const btnCenso = document.getElementById('tab-btn-censo');
       const btnEstandar = document.getElementById('tab-btn-estandar');
       const btnClub = document.getElementById('tab-btn-club');
       const btnGestion = document.getElementById('tab-btn-gestion');
+      const btnAjustes = document.getElementById('tab-btn-ajustes');
 
       tabCenso.classList.add('hidden');
       tabEstandar.classList.add('hidden');
       tabClub.classList.add('hidden');
       tabGestion.classList.add('hidden');
+      tabAjustes.classList.add('hidden');
 
       btnCenso.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
       btnEstandar.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
       btnClub.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
       btnGestion.className = "flex-1 py-3 text-xs font-semibold text-amber-400 flex flex-col items-center gap-1 touch-target";
+      btnAjustes.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
 
       if (pestana === 'censo') {
         tabCenso.classList.remove('hidden');
@@ -332,6 +417,9 @@
         tabGestion.classList.remove('hidden');
         btnGestion.className = "flex-1 py-3 text-xs font-bold text-amber-400 border-t-2 border-amber-500 flex flex-col items-center gap-1 touch-target";
         cargarCensoGlobal();
+      } else if (pestana === 'ajustes') {
+        tabAjustes.classList.remove('hidden');
+        btnAjustes.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target";
       }
     }
 
@@ -353,8 +441,10 @@
 
           if (esAdministrador) {
             document.getElementById('tab-btn-gestion').classList.remove('hidden');
+            document.getElementById('opt-todos-criadores').classList.remove('hidden');
           } else {
             document.getElementById('tab-btn-gestion').classList.add('hidden');
+            document.getElementById('opt-todos-criadores').classList.add('hidden');
           }
 
           document.getElementById('sec-auth').classList.add('hidden');
@@ -370,6 +460,7 @@
           document.getElementById('tab-estandar').classList.add('hidden');
           document.getElementById('tab-club').classList.add('hidden');
           document.getElementById('tab-gestion').classList.add('hidden');
+          document.getElementById('tab-ajustes').classList.add('hidden');
           document.getElementById('btn-logout').classList.add('hidden');
         }
       } catch (e) {
@@ -597,6 +688,94 @@
       } else {
         cargarCensoGlobal();
       }
+    }
+
+    // LÓGICA DE REPORTES E IMPRESIÓN
+    async function generarReporte() {
+      const area = document.getElementById('areaImpresion');
+      area.innerHTML = "<p class='text-slate-400 text-center'>Generando reporte...</p>";
+
+      const estado = document.getElementById('filtro-estado').value;
+      const sexo = document.getElementById('filtro-sexo').value;
+      const variedad = document.getElementById('filtro-variedad').value;
+      const alcance = document.getElementById('filtro-alcance').value;
+
+      const client = obtenerClienteSupabase();
+      let query = client.from('ejemplares').select('*');
+
+      if (alcance === 'MIS_ANIMALES' || !esAdministrador) {
+        query = query.eq('id_criador', usuarioActual.id);
+      }
+
+      if (estado !== 'TODOS') query = query.eq('estado_prelibro', estado);
+      if (sexo !== 'TODOS') query = query.eq('sexo', sexo);
+      if (variedad !== 'TODOS') query = query.eq('variedad_color', variedad);
+
+      const { data, error } = await query.order('anilla', { ascending: true });
+
+      if (error) {
+        area.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        area.innerHTML = `<p class="text-amber-400 text-center italic">No hay ningún ejemplar que coincida con los filtros seleccionados.</p>`;
+        return;
+      }
+
+      const fechaHoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      let html = `
+        <div class="space-y-2 mb-4 pb-3 border-b border-slate-700">
+          <div class="flex justify-between items-center">
+            <h2 class="font-bold text-sm text-slate-100 uppercase">Asociación Club Gallina Alacantina (ESGA025)</h2>
+            <span class="text-[10px] text-slate-400">Fecha: ${fechaHoy}</span>
+          </div>
+          <p class="text-xs font-semibold text-blue-400">Censo de Pre-Libro Genealógico - ${data.length} Ejemplares</p>
+        </div>
+
+        <table class="tabla-impresion text-xs w-full text-slate-200">
+          <thead>
+            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400">
+              <th class="p-2 text-left">Anilla</th>
+              <th class="p-2 text-left">Sexo</th>
+              <th class="p-2 text-left">Variedad</th>
+              <th class="p-2 text-left">Año</th>
+              <th class="p-2 text-left">Padre / Madre</th>
+              <th class="p-2 text-left">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(el => {
+        html += `
+          <tr class="border-b border-slate-800/60">
+            <td class="p-2 font-bold">${el.anilla}</td>
+            <td class="p-2">${el.sexo} (${el.diametro_anilla}mm)</td>
+            <td class="p-2">${el.variedad_color}</td>
+            <td class="p-2">${el.ano_nacimiento || '-'}</td>
+            <td class="p-2 text-[10px]">${el.anilla_padre || '-'} / ${el.anilla_madre || '-'}</td>
+            <td class="p-2 font-semibold text-[10px]">${el.estado_prelibro || 'Pendiente'}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      area.innerHTML = html;
+    }
+
+    function imprimirListado() {
+      const contenido = document.getElementById('areaImpresion').innerHTML;
+      if (!contenido || contenido.includes('Aplica los filtros') || contenido.includes('Generando')) {
+        alert("Por favor, genera primero una vista previa antes de imprimir.");
+        return;
+      }
+      window.print();
     }
   </script>
 </body>
