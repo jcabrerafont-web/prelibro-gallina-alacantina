@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pre-Libro Gallina Alacantina (ESGA025)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SDK Oficial Supabase -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- SDK Oficial Supabase (Versión UMD compatible) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    /* Estilos táctiles y zona de confort para manejo con una sola mano */
     .touch-target {
       min-height: 48px;
     }
@@ -284,16 +283,25 @@
     let usuarioActual = null;
     let esAdministrador = false;
 
+    // Inicialización del cliente Supabase
+    function obtenerClienteSupabase() {
+      if (!db) {
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+          throw new Error("No se ha cargado la librería de Supabase.");
+        }
+      }
+      return db;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       try {
-        if (window.supabase) {
-          db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-          comprobarSesion();
-        } else {
-          document.getElementById('auth-msg').textContent = "Error: No se pudo conectar con el servidor Supabase.";
-        }
+        obtenerClienteSupabase();
+        comprobarSesion();
       } catch (e) {
-        document.getElementById('auth-msg').textContent = "Error de conexión: " + e.message;
+        const msg = document.getElementById('auth-msg');
+        if (msg) msg.textContent = "Error al iniciar: " + e.message;
       }
 
       const formEjemplar = document.getElementById('form-ejemplar');
@@ -341,40 +349,44 @@
     }
 
     async function comprobarSesion() {
-      if (!db) return;
-      const { data: { session } } = await db.auth.getSession();
-      
-      if (session) {
-        usuarioActual = session.user;
-
-        const { data: perfil } = await db
-          .from('perfiles')
-          .select('rol')
-          .eq('id', usuarioActual.id)
-          .maybeSingle();
-
-        esAdministrador = perfil && (perfil.rol === 'admin' || perfil.rol === 'inspector');
-
-        if (esAdministrador) {
-          document.getElementById('tab-btn-gestion').classList.remove('hidden');
-        } else {
-          document.getElementById('tab-btn-gestion').classList.add('hidden');
-        }
-
-        document.getElementById('sec-auth').classList.add('hidden');
-        document.getElementById('nav-tabs').classList.remove('hidden');
-        document.getElementById('tab-censo').classList.remove('hidden');
-        document.getElementById('btn-logout').classList.remove('hidden');
+      try {
+        const client = obtenerClienteSupabase();
+        const { data: { session } } = await client.auth.getSession();
         
-        cargarCenso();
-      } else {
-        document.getElementById('sec-auth').classList.remove('hidden');
-        document.getElementById('nav-tabs').classList.add('hidden');
-        document.getElementById('tab-censo').classList.add('hidden');
-        document.getElementById('tab-estandar').classList.add('hidden');
-        document.getElementById('tab-club').classList.add('hidden');
-        document.getElementById('tab-gestion').classList.add('hidden');
-        document.getElementById('btn-logout').classList.add('hidden');
+        if (session) {
+          usuarioActual = session.user;
+
+          const { data: perfil } = await client
+            .from('perfiles')
+            .select('rol')
+            .eq('id', usuarioActual.id)
+            .maybeSingle();
+
+          esAdministrador = perfil && (perfil.rol === 'admin' || perfil.rol === 'inspector');
+
+          if (esAdministrador) {
+            document.getElementById('tab-btn-gestion').classList.remove('hidden');
+          } else {
+            document.getElementById('tab-btn-gestion').classList.add('hidden');
+          }
+
+          document.getElementById('sec-auth').classList.add('hidden');
+          document.getElementById('nav-tabs').classList.remove('hidden');
+          document.getElementById('tab-censo').classList.remove('hidden');
+          document.getElementById('btn-logout').classList.remove('hidden');
+          
+          cargarCenso();
+        } else {
+          document.getElementById('sec-auth').classList.remove('hidden');
+          document.getElementById('nav-tabs').classList.add('hidden');
+          document.getElementById('tab-censo').classList.add('hidden');
+          document.getElementById('tab-estandar').classList.add('hidden');
+          document.getElementById('tab-club').classList.add('hidden');
+          document.getElementById('tab-gestion').classList.add('hidden');
+          document.getElementById('btn-logout').classList.add('hidden');
+        }
+      } catch (e) {
+        console.error(e);
       }
     }
 
@@ -393,7 +405,8 @@
       msg.textContent = "Procesando registro...";
 
       try {
-        const { data, error } = await db.auth.signUp({ email, password });
+        const client = obtenerClienteSupabase();
+        const { data, error } = await client.auth.signUp({ email, password });
         if (error) {
           msg.style.color = "#f87171";
           msg.textContent = "Error: " + error.message;
@@ -421,14 +434,9 @@
       msg.style.color = "#60a5fa";
       msg.textContent = "Iniciando sesión...";
 
-      if (!db) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Error: Conexión no inicializada.";
-        return;
-      }
-
       try {
-        const { data, error } = await db.auth.signInWithPassword({ email, password });
+        const client = obtenerClienteSupabase();
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (error) {
           msg.style.color = "#f87171";
           msg.textContent = "Error: " + error.message;
@@ -456,7 +464,8 @@
       msg.textContent = "Enviando enlace de recuperación...";
 
       try {
-        const { error } = await db.auth.resetPasswordForEmail(email, {
+        const client = obtenerClienteSupabase();
+        const { error } = await client.auth.resetPasswordForEmail(email, {
           redirectTo: 'https://alacantinapp.vercel.app'
         });
 
@@ -474,8 +483,13 @@
     }
 
     async function cerrarSesion() {
-      if (db) await db.auth.signOut();
-      comprobarSesion();
+      try {
+        const client = obtenerClienteSupabase();
+        await client.auth.signOut();
+        comprobarSesion();
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     async function guardarEjemplar(e) {
@@ -495,7 +509,8 @@
         id_criador: usuarioActual.id
       };
 
-      const { data, error } = await db.from('ejemplares').insert([nuevoAnimal]);
+      const client = obtenerClienteSupabase();
+      const { data, error } = await client.from('ejemplares').insert([nuevoAnimal]);
 
       if (error) {
         alert("Error al guardar: " + error.message);
@@ -510,7 +525,8 @@
       const contenedor = document.getElementById('lista-ejemplares');
       contenedor.innerHTML = "Cargando censo...";
 
-      const { data, error } = await db.from('ejemplares').select('*').eq('id_criador', usuarioActual.id).order('creado_el', { ascending: false });
+      const client = obtenerClienteSupabase();
+      const { data, error } = await client.from('ejemplares').select('*').eq('id_criador', usuarioActual.id).order('creado_el', { ascending: false });
 
       if (error) {
         contenedor.innerHTML = "Error al obtener registros: " + error.message;
@@ -547,7 +563,8 @@
       const contenedor = document.getElementById('lista-global-ejemplares');
       contenedor.innerHTML = "Cargando registros globales...";
 
-      const { data, error } = await db.from('ejemplares').select('*').order('creado_el', { ascending: false });
+      const client = obtenerClienteSupabase();
+      const { data, error } = await client.from('ejemplares').select('*').order('creado_el', { ascending: false });
 
       if (error) {
         contenedor.innerHTML = "Error al cargar datos: " + error.message;
@@ -586,7 +603,8 @@
     }
 
     async function cambiarEstado(idRecord, nuevoEstado) {
-      const { error } = await db.from('ejemplares').update({ estado_prelibro: nuevoEstado }).eq('id', idRecord);
+      const client = obtenerClienteSupabase();
+      const { error } = await client.from('ejemplares').update({ estado_prelibro: nuevoEstado }).eq('id', idRecord);
       if (error) {
         alert("Error al actualizar estado: " + error.message);
       } else {
