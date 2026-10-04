@@ -7,6 +7,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SDK Oficial Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #areaImpresion, #areaImpresion * { visibility: visible; }
+      #areaImpresion { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans pb-20">
 
@@ -27,17 +34,21 @@
     </div>
   </header>
 
-  <!-- Navegación Inferior / 3 Pestañas -->
+  <!-- Navegación Inferior / Pestañas -->
   <nav id="nav-tabs" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
     <div class="max-w-xl mx-auto flex justify-around text-center">
       <button onclick="cambiarPestana('censo')" id="tab-btn-censo" class="flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1">
-        <span>🐓</span> Censo & Registro
+        <span>🐓</span> Mi Corral
       </button>
       <button onclick="cambiarPestana('estandar')" id="tab-btn-estandar" class="flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1">
-        <span>📖</span> Estándar ESGA025
+        <span>📖</span> Estándar
       </button>
       <button onclick="cambiarPestana('club')" id="tab-btn-club" class="flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1">
         <span>🌐</span> El Club
+      </button>
+      <!-- Pestaña exclusiva para Gestores del Libro -->
+      <button onclick="cambiarPestana('gestion')" id="tab-btn-gestion" class="hidden flex-1 py-2.5 text-xs font-semibold text-amber-600 flex flex-col items-center gap-1">
+        <span>🛡️</span> Gestión Libro
       </button>
     </div>
   </nav>
@@ -65,18 +76,24 @@
       <p id="auth-msg" class="text-xs text-center font-semibold mt-2 min-h-[20px]"></p>
     </section>
 
-    <!-- PESTAÑA 1: CENSO Y REGISTRO -->
+    <!-- PESTAÑA 1: CENSO Y REGISTRO DEL CRIADOR -->
     <div id="tab-censo" class="hidden space-y-6">
 
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <h2 class="text-md font-bold mb-4 text-slate-900 flex items-center gap-2">
-          <span>🐓</span> Registrar Ejemplar en Censo
+          <span>🐓</span> Declarar Ejemplar
         </h2>
         <form id="form-ejemplar" class="space-y-4">
           
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">NÚMERO DE ANILLA *</label>
-            <input type="text" id="anilla" placeholder="Ej: ESGA025-2026-001" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">NÚMERO DE ANILLA *</label>
+              <input type="text" id="anilla" placeholder="Ej: ESGA025-2026-001" required class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">AÑO NACIMIENTO</label>
+              <input type="number" id="ano_nacimiento" placeholder="2026" min="2018" max="2030" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -108,15 +125,27 @@
             </select>
           </div>
 
+          <!-- Genealogía opcional -->
+          <div class="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">ANILLA PADRE</label>
+              <input type="text" id="anilla_padre" placeholder="Fundador / Opcional" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">ANILLA MADRE</label>
+              <input type="text" id="anilla_madre" placeholder="Fundadora / Opcional" class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+
           <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition shadow-sm">
-            Guardar en Base de Datos Central
+            Enviar a Revisión del Libro
           </button>
         </form>
       </section>
 
       <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-md font-bold text-slate-900">📜 Mis Ejemplares Registrados</h2>
+          <h2 class="text-md font-bold text-slate-900">📜 Mis Ejemplares Declarados</h2>
           <button id="btn-refresh" type="button" class="text-xs bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded font-semibold text-slate-700 border">🔄 Actualizar</button>
         </div>
         <div id="lista-ejemplares" class="space-y-3 text-xs text-slate-500">
@@ -178,7 +207,6 @@
         </p>
 
         <div class="space-y-3 pt-2">
-          <!-- Botón Web -->
           <a href="https://www.clubalacantina.com/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 hover:bg-blue-50 hover:border-blue-300 transition group">
             <div class="flex items-center gap-3">
               <span class="text-xl">🌐</span>
@@ -190,7 +218,6 @@
             <span class="text-xs text-slate-400 group-hover:text-blue-700 font-bold">→</span>
           </a>
 
-          <!-- Botón YouTube -->
           <a href="https://www.youtube.com/channel/UCiW1IoJmsL_f55NOdAKWuRw" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 hover:bg-red-50 hover:border-red-300 transition group">
             <div class="flex items-center gap-3">
               <span class="text-xl">🎥</span>
@@ -205,6 +232,25 @@
       </section>
     </div>
 
+    <!-- PESTAÑA 4 (ADMIN/GESTOR): PANEL DEL LIBRO GENEALÓGICO -->
+    <div id="tab-gestion" class="hidden space-y-6">
+      <section class="bg-amber-50 p-5 rounded-xl shadow-sm border border-amber-200">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-md font-bold text-amber-900 flex items-center gap-2">
+              <span>🛡️</span> Validación del Pre-Libro
+            </h2>
+            <p class="text-[11px] text-amber-700">Panel para Inspectores y Gestores del Libro Genealógico</p>
+          </div>
+          <button onclick="cargarCensoGlobal()" type="button" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1 rounded font-semibold border border-amber-300">🔄 Refrescar</button>
+        </div>
+
+        <div id="lista-global-ejemplares" class="space-y-3 text-xs text-slate-600">
+          Cargando solicitudes de todos los criadores...
+        </div>
+      </section>
+    </div>
+
   </main>
 
   <script>
@@ -213,6 +259,7 @@
     
     let db = null;
     let usuarioActual = null;
+    let esAdministrador = false;
 
     document.addEventListener('DOMContentLoaded', () => {
       try {
@@ -236,22 +283,23 @@
       const tabCenso = document.getElementById('tab-censo');
       const tabEstandar = document.getElementById('tab-estandar');
       const tabClub = document.getElementById('tab-club');
+      const tabGestion = document.getElementById('tab-gestion');
 
       const btnCenso = document.getElementById('tab-btn-censo');
       const btnEstandar = document.getElementById('tab-btn-estandar');
       const btnClub = document.getElementById('tab-btn-club');
+      const btnGestion = document.getElementById('tab-btn-gestion');
 
-      // Ocultar todas
       tabCenso.classList.add('hidden');
       tabEstandar.classList.add('hidden');
       tabClub.classList.add('hidden');
+      tabGestion.classList.add('hidden');
 
-      // Estilos inactivos por defecto
       btnCenso.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
       btnEstandar.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
       btnClub.className = "flex-1 py-2.5 text-xs font-semibold text-slate-500 flex flex-col items-center gap-1";
+      btnGestion.className = "flex-1 py-2.5 text-xs font-semibold text-amber-600 flex flex-col items-center gap-1";
 
-      // Activar la seleccionada
       if (pestana === 'censo') {
         tabCenso.classList.remove('hidden');
         btnCenso.className = "flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1";
@@ -261,18 +309,40 @@
       } else if (pestana === 'club') {
         tabClub.classList.remove('hidden');
         btnClub.className = "flex-1 py-2.5 text-xs font-bold text-blue-700 border-t-2 border-blue-700 flex flex-col items-center gap-1";
+      } else if (pestana === 'gestion') {
+        tabGestion.classList.remove('hidden');
+        btnGestion.className = "flex-1 py-2.5 text-xs font-bold text-amber-800 border-t-2 border-amber-600 flex flex-col items-center gap-1";
+        cargarCensoGlobal();
       }
     }
 
     async function comprobarSesion() {
       if (!db) return;
       const { data: { session } } = await db.auth.getSession();
+      
       if (session) {
         usuarioActual = session.user;
+
+        // Consultar el rol del usuario en la tabla 'perfiles'
+        const { data: perfil } = await db
+          .from('perfiles')
+          .select('rol')
+          .eq('id', usuarioActual.id)
+          .maybeSingle();
+
+        esAdministrador = perfil && (perfil.rol === 'admin' || perfil.rol === 'inspector');
+
+        if (esAdministrador) {
+          document.getElementById('tab-btn-gestion').classList.remove('hidden');
+        } else {
+          document.getElementById('tab-btn-gestion').classList.add('hidden');
+        }
+
         document.getElementById('sec-auth').classList.add('hidden');
         document.getElementById('nav-tabs').classList.remove('hidden');
         document.getElementById('tab-censo').classList.remove('hidden');
         document.getElementById('btn-logout').classList.remove('hidden');
+        
         cargarCenso();
       } else {
         document.getElementById('sec-auth').classList.remove('hidden');
@@ -280,6 +350,7 @@
         document.getElementById('tab-censo').classList.add('hidden');
         document.getElementById('tab-estandar').classList.add('hidden');
         document.getElementById('tab-club').classList.add('hidden');
+        document.getElementById('tab-gestion').classList.add('hidden');
         document.getElementById('btn-logout').classList.add('hidden');
       }
     }
@@ -357,6 +428,10 @@
         diametro_anilla: sexo === 'Gallo' ? 20 : 18,
         peso_gramos: parseInt(document.getElementById('peso').value) || null,
         variedad_color: document.getElementById('variedad').value,
+        ano_nacimiento: parseInt(document.getElementById('ano_nacimiento').value) || new Date().getFullYear(),
+        anilla_padre: document.getElementById('anilla_padre').value || null,
+        anilla_madre: document.getElementById('anilla_madre').value || null,
+        estado_prelibro: 'Pendiente',
         id_criador: usuarioActual.id
       };
 
@@ -365,7 +440,7 @@
       if (error) {
         alert("Error al guardar: " + error.message);
       } else {
-        alert("Ejemplar registrado correctamente.");
+        alert("Ejemplar registrado y enviado a revisión.");
         document.getElementById('form-ejemplar').reset();
         cargarCenso();
       }
@@ -375,7 +450,7 @@
       const contenedor = document.getElementById('lista-ejemplares');
       contenedor.innerHTML = "Cargando censo...";
 
-      const { data, error } = await db.from('ejemplares').select('*').order('creado_el', { ascending: false });
+      const { data, error } = await db.from('ejemplares').select('*').eq('id_criador', usuarioActual.id).order('creado_el', { ascending: false });
 
       if (error) {
         contenedor.innerHTML = "Error al obtener registros: " + error.message;
@@ -389,19 +464,74 @@
 
       contenedor.innerHTML = '';
       data.forEach(el => {
+        let badgeColor = "bg-amber-100 text-amber-800 border-amber-200";
+        if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-green-100 text-green-800 border-green-200";
+        if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-red-100 text-red-800 border-red-200";
+
         contenedor.innerHTML += `
           <div class="p-3 border rounded-lg bg-slate-50 flex justify-between items-start">
             <div>
               <div class="flex items-center gap-2">
                 <span class="font-bold text-slate-900 text-sm">${el.anilla}</span>
-                <span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-blue-100 text-blue-800 border-blue-200">${el.estado_prelibro}</span>
+                <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
               </div>
               <p class="text-slate-600 mt-1"><strong>Variedad:</strong> ${el.variedad_color}</p>
-              <p class="text-slate-500"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Peso:</strong> ${el.peso_gramos || 'Sin registrar'} g</p>
+              <p class="text-slate-500"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Año:</strong> ${el.ano_nacimiento || '-'}</p>
             </div>
           </div>
         `;
       });
+    }
+
+    async function cargarCensoGlobal() {
+      const contenedor = document.getElementById('lista-global-ejemplares');
+      contenedor.innerHTML = "Cargando registros globales...";
+
+      const { data, error } = await db.from('ejemplares').select('*').order('creado_el', { ascending: false });
+
+      if (error) {
+        contenedor.innerHTML = "Error al cargar la base de datos central: " + error.message;
+        return;
+      }
+
+      if (data.length === 0) {
+        contenedor.innerHTML = "No hay registros en la base de datos.";
+        return;
+      }
+
+      contenedor.innerHTML = '';
+      data.forEach(el => {
+        let badgeColor = "bg-amber-100 text-amber-800 border-amber-200";
+        if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-green-100 text-green-800 border-green-200";
+        if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-red-100 text-red-800 border-red-200";
+
+        contenedor.innerHTML += `
+          <div class="p-3 border rounded-lg bg-white shadow-sm flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-900 text-sm">${el.anilla}</span>
+              <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
+            </div>
+            <div class="text-[11px] text-slate-600 space-y-0.5">
+              <p><strong>Variedad:</strong> ${el.variedad_color} | <strong>Sexo:</strong> ${el.sexo}</p>
+              <p><strong>Padre:</strong> ${el.anilla_padre || '-'} | <strong>Madre:</strong> ${el.anilla_madre || '-'}</p>
+              <p class="text-slate-400 text-[10px]">ID Criador: ${el.id_criador}</p>
+            </div>
+            <div class="flex gap-2 pt-2 border-t border-slate-100">
+              <button onclick="cambiarEstado('${el.id}', 'Inscrito Oficial')" class="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-1 rounded text-[11px]">Validar e Inscribir</button>
+              <button onclick="cambiarEstado('${el.id}', 'Rechazado')" class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 rounded text-[11px]">Rechazar</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function cambiarEstado(idRecord, nuevoEstado) {
+      const { error } = await db.from('ejemplares').update({ estado_prelibro: nuevoEstado }).eq('id', idRecord);
+      if (error) {
+        alert("Error al actualizar estado: " + error.message);
+      } else {
+        cargarCensoGlobal();
+      }
     }
   </script>
 </body>
