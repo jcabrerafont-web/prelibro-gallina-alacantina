@@ -56,24 +56,31 @@
   <main class="max-w-xl mx-auto p-4 space-y-6">
 
     <!-- AUTENTICACIÓN -->
-    <section id="sec-auth" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
-      <h2 class="text-md font-bold text-slate-900 border-b pb-2">Acceso para Criadores e Inspectores</h2>
+    <section id="sec-auth" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-md font-bold text-slate-900 border-b pb-2 mb-4">Acceso para Criadores e Inspectores</h2>
       
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">CORREO ELECTRÓNICO</label>
-        <input type="email" id="auth-email" placeholder="criador@ejemplo.com" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-      
-      <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">CONTRASEÑA</label>
-        <input type="password" id="auth-password" placeholder="******" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
+      <form id="form-login" onsubmit="event.preventDefault();" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">CORREO ELECTRÓNICO</label>
+          <input type="email" id="auth-email" placeholder="criador@ejemplo.com" required class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">CONTRASEÑA</label>
+          <input type="password" id="auth-password" placeholder="******" class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
 
-      <div class="flex gap-2 pt-2">
-        <button id="btn-login" type="button" class="flex-1 bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm hover:bg-blue-800 transition shadow-sm">Iniciar Sesión</button>
-        <button id="btn-signup" type="button" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-lg text-sm hover:bg-slate-200 transition border border-slate-300">Registrarse</button>
-      </div>
-      <p id="auth-msg" class="text-xs text-center font-semibold mt-2 min-h-[20px]"></p>
+        <div class="flex gap-2 pt-2">
+          <button id="btn-login" type="button" onclick="iniciarSesion()" class="flex-1 bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm hover:bg-blue-800 transition shadow-sm">Iniciar Sesión</button>
+          <button id="btn-signup" type="button" onclick="registrarse()" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-lg text-sm hover:bg-slate-200 transition border border-slate-300">Registrarse</button>
+        </div>
+
+        <div class="text-center pt-2">
+          <button id="btn-reset" type="button" onclick="recuperarPassword()" class="text-xs text-blue-600 hover:underline font-semibold">¿Olvidaste tu contraseña?</button>
+        </div>
+
+        <p id="auth-msg" class="text-xs text-center font-semibold mt-2 min-h-[20px]"></p>
+      </form>
     </section>
 
     <!-- PESTAÑA 1: CENSO Y REGISTRO DEL CRIADOR -->
@@ -384,7 +391,7 @@
       }
     }
 
-    async function iniciarSesion() {
+   async function iniciarSesion() {
       const msg = document.getElementById('auth-msg');
       const email = document.getElementById('auth-email').value.trim();
       const password = document.getElementById('auth-password').value;
@@ -413,6 +420,36 @@
       }
     }
 
+    async function recuperarPassword() {
+      const msg = document.getElementById('auth-msg');
+      const email = document.getElementById('auth-email').value.trim();
+
+      if (!email) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Escribe tu correo electrónico en la casilla de arriba.";
+        return;
+      }
+
+      msg.style.color = "#2563eb";
+      msg.textContent = "Enviando enlace de recuperación...";
+
+      try {
+        const { error } = await db.auth.resetPasswordForEmail(email, {
+          redirectTo: 'https://alacantinapp.vercel.app'
+        });
+
+        if (error) {
+          msg.style.color = "#dc2626";
+          msg.textContent = "Error: " + error.message;
+        } else {
+          msg.style.color = "#16a34a";
+          msg.textContent = "¡Correo enviado! Revisa tu bandeja de entrada o Spam.";
+        }
+      } catch (err) {
+        msg.style.color = "#dc2626";
+        msg.textContent = "Error al enviar: " + err.message;
+      }
+    }
     async function cerrarSesion() {
       if (db) await db.auth.signOut();
       comprobarSesion();
