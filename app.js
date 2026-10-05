@@ -3,10 +3,10 @@
 // Configuración de Supabase
 const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
 const SUPABASE_ANON_KEY = 'tu-anon-key';
-let supabase = null;
+let supabaseClient = null;
 
 if (SUPABASE_URL !== 'https://tu-proyecto.supabase.co') {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 // Censo local inicial
@@ -14,15 +14,15 @@ let ejemplares = [
   {
     anilla: "E 0001",
     sexo: "M",
-    variedad: "Apercada",
-    anyo: "2025",
+    variedad: "Blanco",
+    anyo: "2026",
     peso: "3250",
     estado: "Apto",
     padre: "E 0000",
     madre: "E 0000",
     observaciones: "Gallo fundador. Excelente cresta y tarsos amarillos limpios.",
     criador: "José Joaquín Cabrera Font",
-    rega: "ES030410000123",
+    rega: "ES000000000000",
     socio: "Nº 001"
   }
 ];
