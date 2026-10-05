@@ -63,15 +63,15 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
-            <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="José Joaquín Cabrera Font">
+            <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
-            <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES030410000123">
+            <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
           </div>
           <div>
             <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
-            <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 042">
+            <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
           </div>
         </div>
 
@@ -98,8 +98,8 @@
             <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
               <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
                 <option value="Blanco" class="text-slate-100">Blanco</option>
-                <option value="Negro Moteado" class="text-slate-100">Negro Moteado</option>
-                <option value="Pinto/Exchequer" class="text-slate-100">Pinto / Exchequer</option>
+                <option value="Negra moteada de blanco" class="text-slate-100">Negra moteada de blanco</option>
+                <option value="Pinta en negro" class="text-slate-100">Pinta en negro (Exchequer)</option>
               </optgroup>
               <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
                 <option value="Armiñada en negro" class="text-slate-100">Armiñada en negro</option>
@@ -139,7 +139,7 @@
 
           <div class="md:col-span-3">
             <label class="block text-xs text-slate-400 mb-1">Observaciones / Rasgos Morfológicos</label>
-            <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Cresta sencilla de 5 a 7 dientes, orejillas rojas, tarsos amarillos..."></textarea>
+            <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Detalles morfológicos u observaciones del ejemplar..."></textarea>
           </div>
 
           <div class="md:col-span-3 flex justify-end gap-3 pt-2">
@@ -207,8 +207,8 @@
               <option value="Todas">Todas las variedades</option>
               <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
                 <option value="Blanco" class="text-slate-100">Blanco</option>
-                <option value="Negro Moteado" class="text-slate-100">Negro Moteado</option>
-                <option value="Pinto/Exchequer" class="text-slate-100">Pinto / Exchequer</option>
+                <option value="Negra moteada de blanco" class="text-slate-100">Negra moteada de blanco</option>
+                <option value="Pinta en negro" class="text-slate-100">Pinta en negro (Exchequer)</option>
               </optgroup>
               <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
                 <option value="Armiñada en negro" class="text-slate-100">Armiñada en negro</option>
@@ -243,4 +243,21 @@
           <p class="text-xs text-slate-400">Patrón de la Raza Gallina Alacantina (Código ESGA025)</p>
         </div>
         <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
-          Abrir
+          Abrir FESACOCUR
+        </a>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 5: GESTIÓN Y VALIDACIÓN -->
+    <section id="sec-gestion" class="hidden space-y-4">
+      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+        <h2 class="text-lg font-semibold text-amber-400 mb-2">Validación de Datos del Pre-Libro</h2>
+        <p class="text-sm text-slate-300">Panel reservado para inspectores y administradores del pre-libro de orígenes.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
