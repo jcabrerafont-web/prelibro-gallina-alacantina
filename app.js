@@ -22,9 +22,9 @@ let ejemplares = [
     estado: "Apto",
     padre: "E 0000",
     madre: "E 0000",
-    observaciones: "Gallo fundador. Excelente cresta sencilla, orejillas rojas y tarsos amarillos limpios.",
+    observaciones: "Gallo fundador. Excelente cresta sencilla, orejillas blancas y tarsos blancos limpios.",
     criador: "José Joaquín Cabrera Font",
-    rega: "ES030410000123",
+    rega: "ES000000000000",
     socio: "Nº 001"
   }
 ];
