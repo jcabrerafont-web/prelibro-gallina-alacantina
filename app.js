@@ -1,4 +1,6 @@
-// Lógica principal de AlacantinApp y Estado de la Aplicación
+// ==========================================
+// CONFIGURACIÓN Y ESTADO DE LA APLICACIÓN
+// ==========================================
 
 // Configuración de Supabase
 const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
@@ -20,14 +22,18 @@ let ejemplares = [
     estado: "Apto",
     padre: "E 0000",
     madre: "E 0000",
-    observaciones: "Gallo fundador. Excelente cresta y tarsos amarillos limpios.",
+    observaciones: "Gallo fundador. Excelente cresta sencilla, orejillas rojas y tarsos amarillos limpios.",
     criador: "José Joaquín Cabrera Font",
-    rega: "ES000000000000",
+    rega: "ES030410000123",
     socio: "Nº 001"
   }
 ];
 
-// Actualizar peso sugerido según el sexo
+// ==========================================
+// FUNCIONES DE INTERFAZ Y FORMULARIOS
+// ==========================================
+
+// Actualizar peso sugerido según el sexo (3,25 kg Macho / 2,4 kg Hembra)
 function actualizarPesoPorDefecto() {
   const sexo = document.getElementById('sexo').value;
   const inputPeso = document.getElementById('peso');
@@ -75,26 +81,43 @@ function switchTab(tab) {
 // Modal de Login y Autenticación
 function toggleAuthModal() {
   const modal = document.getElementById('modal-auth');
-  modal.classList.toggle('hidden');
+  if (modal) modal.classList.toggle('hidden');
 }
 
 function handleAuth(e) {
   e.preventDefault();
-  document.getElementById('auth-indicator').className = "w-2 h-2 rounded-full bg-green-500";
-  document.getElementById('auth-state').innerText = "Socio Autenticado";
-  document.getElementById('btn-auth').innerText = "Salir";
+  const authInd = document.getElementById('auth-indicator');
+  const authState = document.getElementById('auth-state');
+  const btnAuth = document.getElementById('btn-auth');
+
+  if (authInd) authInd.className = "w-2 h-2 rounded-full bg-green-500";
+  if (authState) authState.innerText = "Socio Autenticado";
+  if (btnAuth) btnAuth.innerText = "Salir";
   toggleAuthModal();
 }
 
 // Limpiar campos del formulario
 function limpiarFormulario() {
-  document.getElementById('form-ejemplar').reset();
-  document.getElementById('sexo').value = 'M';
+  const form = document.getElementById('form-ejemplar');
+  if (form) form.reset();
+  
+  const sexo = document.getElementById('sexo');
+  if (sexo) sexo.value = 'M';
+  
   actualizarPesoPorDefecto();
-  document.getElementById('anilla').placeholder = "E 0000";
-  document.getElementById('padre').placeholder = "E 0000";
-  document.getElementById('madre').placeholder = "E 0000";
+  
+  const anilla = document.getElementById('anilla');
+  const padre = document.getElementById('padre');
+  const madre = document.getElementById('madre');
+
+  if (anilla) anilla.placeholder = "E 0000";
+  if (padre) padre.placeholder = "E 0000";
+  if (madre) madre.placeholder = "E 0000";
 }
+
+// ==========================================
+// LÓGICA DE NEGOCIO Y DATOS (CENSO E INFORMES)
+// ==========================================
 
 // Guardar / Editar Ejemplar
 function guardarEjemplar(e) {
@@ -130,6 +153,7 @@ function guardarEjemplar(e) {
 // Renderizar Tabla de Censo
 function renderCenso() {
   const tbody = document.getElementById('tabla-ejemplares');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (ejemplares.length === 0) {
@@ -178,6 +202,8 @@ function filtrarInformes() {
   });
 
   const container = document.getElementById('resultado-informe');
+  if (!container) return;
+
   if (filtrados.length === 0) {
     container.innerHTML = `<div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm">No se encontraron ejemplares con los filtros seleccionados.</div>`;
     return;
@@ -194,7 +220,7 @@ function filtrarInformes() {
     html += `
       <div class="p-3 bg-slate-900 rounded-lg border border-slate-700 text-xs flex justify-between items-center">
         <div>
-          <span class="font-bold text-amber-400 text-sm">${f.anilla}</span> - ${f.sexo === 'M' ? 'Macho' : 'Hembra'} | ${f.variedad} | ${f.anyo} | ${f.peso} g
+          <span class="font-bold text-amber-400 text-sm">${f.anilla}</span> - ${f.sexo === 'M' ? 'Macho ♂' : 'Hembra ♀'} | ${f.variedad} | ${f.anyo} | ${f.peso} g
           <div class="text-slate-400 mt-1">Criador: ${f.criador} (${f.socio}) - REGA: ${f.rega}</div>
         </div>
         <span class="px-2 py-1 rounded border ${f.estado === 'Apto' ? 'border-green-500 text-green-400' : 'border-yellow-500 text-yellow-400'}">${f.estado}</span>
@@ -206,7 +232,52 @@ function filtrarInformes() {
   container.innerHTML = html;
 }
 
-// Inicialización al cargar el documento
+// Función auxiliar para exportar/imprimir Ficha Genealógica en PDF
+function exportarFichaPDF(anilla) {
+  const ej = ejemplares.find(e => e.anilla === anilla);
+  if (!ej) return;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Ficha Genealógica - ${ej.anilla}</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; color: #1e293b; }
+          .card { border: 2px solid #cbd5e1; border-radius: 8px; padding: 20px; max-width: 600px; margin: auto; }
+          h2 { color: #d97706; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+          .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .label { font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h2>Ficha de Ejemplar ESGA025</h2>
+          <div class="row"><span class="label">Anilla:</span> <span>${ej.anilla}</span></div>
+          <div class="row"><span class="label">Sexo:</span> <span>${ej.sexo === 'M' ? 'Macho' : 'Hembra'}</span></div>
+          <div class="row"><span class="label">Variedad:</span> <span>${ej.variedad}</span></div>
+          <div class="row"><span class="label">Año de Nacimiento:</span> <span>${ej.anyo}</span></div>
+          <div class="row"><span class="label">Peso:</span> <span>${ej.peso} g</span></div>
+          <div class="row"><span class="label">Estado Calificación:</span> <span>${ej.estado}</span></div>
+          <div class="row"><span class="label">Padre:</span> <span>${ej.padre}</span></div>
+          <div class="row"><span class="label">Madre:</span> <span>${ej.madre}</span></div>
+          <hr/>
+          <div class="row"><span class="label">Criador:</span> <span>${ej.criador} (${ej.socio})</span></div>
+          <div class="row"><span class="label">REGA:</span> <span>${ej.rega}</span></div>
+          <div class="row"><span class="label">Observaciones:</span> <span>${ej.observaciones}</span></div>
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   renderCenso();
 });
