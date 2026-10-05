@@ -1,828 +1,310 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pre-Libro Gallina Alacantina (ESGA025)</title>
+  <title>AlacantinApp - Gestor Pre-Libro ESGA025</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SDK Oficial Supabase (UMD) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <!-- jsPDF y AutoTable para exportación a PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
-  <style>
-    .touch-target { min-height: 48px; }
-    @media print {
-      body { background-color: #ffffff !important; color: #000000 !important; }
-      header, nav, #sec-auth, #form-ejemplar, .no-imprimir { display: none !important; }
-      #areaImpresion, #areaImpresion * { visibility: visible; }
-      #areaImpresion { position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; padding: 0; }
-      .tabla-impresion th, .tabla-impresion td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; font-size: 11px; }
-      .tabla-impresion { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans pb-28 min-h-screen">
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-0">
 
-  <!-- Header -->
-  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 text-white p-4 sticky top-0 z-40">
-    <div class="max-w-xl mx-auto flex justify-between items-center gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-blue-900/50 rounded-full flex items-center justify-center text-blue-400 font-bold text-xs border border-blue-500/30 overflow-hidden flex-shrink-0">
-          <img src="logo.png" alt="Club Gallina Alacantina" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <span class="hidden">ACGA</span>
-        </div>
+  <!-- CABECERA PRINCIPAL -->
+  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 no-print">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🐓</span>
         <div>
-          <h1 class="font-bold text-base leading-tight text-slate-100">Gallina Alacantina</h1>
-          <p class="text-[11px] text-blue-400">Asociación Club Gallina Alacantina • ESGA025</p>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent leading-tight">
+            AlacantinApp
+          </h1>
+          <p class="text-[10px] text-slate-400">Pre-Libro ESGA025</p>
         </div>
       </div>
-      <button id="btn-logout" onclick="cerrarSesion()" class="hidden text-xs bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 px-3 py-2 rounded-xl font-semibold transition touch-target flex items-center">
-        Salir
-      </button>
+      <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
+        <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+        <span id="auth-state">Sesión no iniciada</span>
+        <button onclick="toggleAuthModal()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-xl mx-auto p-4 space-y-6">
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    
+    <!-- PESTAÑAS DESKTOP -->
+    <div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
+      <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
+        📝 Alta Ejemplar
+      </button>
+      <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+        📋 Censo
+      </button>
+      <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+        📊 Informes
+      </button>
+      <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+        📖 Estándar
+      </button>
+      <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
+        🛡️ Validación
+      </button>
+    </div>
 
-    <!-- AUTENTICACIÓN -->
-    <section id="sec-auth" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-      <div class="border-b border-slate-800 pb-3">
-        <h2 class="text-base font-bold text-slate-100">Acceso para Criadores e Inspectores</h2>
-        <p class="text-xs text-slate-400 mt-0.5">Gestión del Libro Genealógico</p>
-      </div>
-      
-      <form id="form-login" onsubmit="event.preventDefault();" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">CORREO ELECTRÓNICO</label>
-          <input type="email" id="auth-email" placeholder="criador@ejemplo.com" required class="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500">
+    <!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
+    <section id="sec-registro" class="space-y-6">
+      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+        <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
+          👤 Datos del Criador Titular
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
+            <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="José Joaquín Cabrera Font">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
+            <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES030410000123">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
+            <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 042">
+          </div>
         </div>
+
+        <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
+          🐓 Ficha Individual del Ejemplar
+        </h2>
         
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">CONTRASEÑA</label>
-          <input type="password" id="auth-password" placeholder="******" class="w-full p-3.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500">
-        </div>
+        <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Código de Anilla *</label>
+            <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+          </div>
 
-        <div class="flex flex-col gap-2.5 pt-2">
-          <button id="btn-login" type="button" onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-blue-900/20 touch-target">
-            Iniciar Sesión
-          </button>
-          <button id="btn-signup" type="button" onclick="registrarse()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-800 text-slate-200 font-bold rounded-xl text-sm transition border border-slate-700 touch-target">
-            Registrarse
-          </button>
-        </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
+            <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+              <option value="M">Macho (Gallo)</option>
+              <option value="H">Hembra (Gallina)</option>
+            </select>
+          </div>
 
-        <div class="text-center pt-1">
-          <button id="btn-reset" type="button" onclick="recuperarPassword()" class="text-xs text-blue-400 hover:underline font-medium py-1">¿Olvidaste tu contraseña?</button>
-        </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
+            <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+              <option value="Apercada">Apercada</option>
+              <option value="Silvestre">Silvestre</option>
+              <option value="Negra">Negra</option>
+              <option value="Blanca">Blanca</option>
+              <option value="Francisca">Francisca</option>
+            </select>
+          </div>
 
-        <p id="auth-msg" class="text-xs text-center font-semibold mt-2 min-h-[20px]"></p>
-      </form>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Año de Nacimiento *</label>
+            <input type="number" id="anyo" value="2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
+            <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Estado de Puntuación</label>
+            <select id="estado" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+              <option value="Pendiente">Pendiente de Inspección</option>
+              <option value="Apto">Apto (Pre-Libro)</option>
+              <option value="No Apto">No Apto</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Anilla Padre</label>
+            <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Anilla Madre</label>
+            <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="block text-xs text-slate-400 mb-1">Observaciones / Rasgos Morfológicos</label>
+            <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Cresta sencilla de 5 a 7 dientes, orejillas rojas, tarsos amarillos..."></textarea>
+          </div>
+
+          <div class="md:col-span-3 flex justify-end gap-3 pt-2">
+            <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">
+              Limpiar
+            </button>
+            <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">
+              Guardar Ejemplar
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
 
-    <!-- PESTAÑA 1: MI CORRAL (REGISTRO Y CENSO DEL CRIADOR) -->
-    <div id="tab-censo" class="hidden space-y-6">
-
-      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl">
-        <h2 class="text-base font-bold mb-4 text-slate-100 flex items-center gap-2 border-b border-slate-800 pb-3">
-          <span>🐓</span> Declarar Ejemplar
-        </h2>
-        <form id="form-ejemplar" class="space-y-4">
-
-          <!-- DATOS DEL CRIADOR Y REGA -->
-          <div class="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">NOMBRE / CRIADOR *</label>
-              <input type="text" id="nombre_criador" placeholder="Nombre completo" required class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">CÓDIGO REGA *</label>
-              <input type="text" id="rega" placeholder="ES123456789" required class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">NÚMERO DE ANILLA *</label>
-              <input type="text" id="anilla" placeholder="ESGA025-2026-001" required class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">AÑO NACIMIENTO</label>
-              <input type="number" id="ano_nacimiento" placeholder="2026" min="2018" max="2030" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">SEXO *</label>
-              <select id="sexo" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-                <option value="Gallo">Gallo (Anilla 20 mm)</option>
-                <option value="Gallina">Gallina (Anilla 18 mm)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">PESO (Gramos)</label>
-              <input type="number" id="peso" placeholder="3200" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1.5">VARIEDAD DE COLOR *</label>
-            <select id="variedad" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-              <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900">
-                <option value="Blanco">Blanco</option>
-                <option value="Negro Moteado">Negro Moteado</option>
-                <option value="Pinto/Exchequer">Pinto / Exchequer</option>
-              </optgroup>
-              <optgroup label="En proceso FESACOCUR" class="bg-slate-900">
-                <option value="Armiñada en negro">Armiñada en negro</option>
-                <option value="Milflores">Milflores</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <!-- Genealogía opcional -->
-          <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">ANILLA PADRE</label>
-              <input type="text" id="anilla_padre" placeholder="Opcional" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 mb-1.5">ANILLA MADRE</label>
-              <input type="text" id="anilla_madre" placeholder="Opcional" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
-            </div>
-          </div>
-
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-blue-950 touch-target">
-            Enviar a Revisión del Libro
+    <!-- SECCIÓN 2: TABLA DE CENSO -->
+    <section id="sec-censo" class="hidden space-y-4">
+      <div class="flex justify-between items-center flex-wrap gap-4">
+        <h2 class="text-xl font-bold text-slate-100">Censo de Ejemplares Registrados</h2>
+        <div class="flex gap-2">
+          <button onclick="generarPDFCenso()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-sm touch-target">
+            📄 Exportar Censo PDF
           </button>
-        </form>
-      </section>
-
-      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-          <h2 class="text-base font-bold text-slate-100">📜 Mis Ejemplares</h2>
-          <button id="btn-refresh" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl font-semibold border border-slate-700 touch-target flex items-center">🔄 Actualizar</button>
         </div>
-        <div id="lista-ejemplares" class="space-y-3 text-xs text-slate-400">
-          Cargando datos...
-        </div>
-      </section>
+      </div>
 
-    </div>
+      <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+            <tr>
+              <th class="p-4">Anilla</th>
+              <th class="p-4">Sexo</th>
+              <th class="p-4">Variedad</th>
+              <th class="p-4">Año</th>
+              <th class="p-4">Peso</th>
+              <th class="p-4">Estado</th>
+              <th class="p-4 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
+            <!-- Cargado dinámicamente por JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <!-- PESTAÑA 2: ESTÁNDAR RACIAL -->
-    <div id="tab-estandar" class="hidden space-y-4">
-      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div>
-            <h2 class="text-base font-bold text-blue-400">Estándar Racial Oficial (ESGA025)</h2>
-            <p class="text-xs text-slate-400">Aprobado por FESACOCUR • Edición 2025</p>
-          </div>
-          <a href="Estandar-Alacantina2025.pdf" target="_blank" download class="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-2 rounded-xl transition shadow-md touch-target flex items-center gap-1.5 flex-shrink-0">
-            <span>📥</span>
-            <span>Descargar PDF</span>
-          </a>
-        </div>
-
-        <div class="w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800" style="height: 70vh; min-height: 480px;">
-          <iframe 
-            src="Estandar-Alacantina2025.pdf" 
-            class="w-full h-full border-0" 
-            title="Estándar Oficial Gallina Alacantina 2025">
-            <div class="p-6 text-center space-y-3 text-slate-300">
-              <p class="text-sm">Tu navegador no permite visualizar PDFs directamente en la página.</p>
-              <a href="Estandar-Alacantina2025.pdf" target="_blank" class="inline-block bg-blue-600 text-white font-bold px-4 py-2 rounded-xl text-xs">Abrir PDF en ventana nueva</a>
-            </div>
-          </iframe>
-        </div>
-      </section>
-    </div>
-
-    <!-- PESTAÑA 3: EL CLUB -->
-    <div id="tab-club" class="hidden space-y-4">
-      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <h2 class="text-base font-bold text-blue-400 border-b border-slate-800 pb-3">Asociación Club Gallina Alacantina</h2>
+    <!-- SECCIÓN 3: INFORMES Y REVISIÓN -->
+    <section id="sec-informes" class="hidden space-y-6">
+      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
+        <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales</h2>
+        <p class="text-sm text-slate-300 mb-4">Aplica los filtros necesarios para generar e imprimir las actas de revisión del Pre-Libro ESGA025.</p>
         
-        <p class="text-xs text-slate-400 leading-relaxed">
-          Entidad dedicada al fomento, selección, conservación y reconocimiento oficial de la raza avícola Gallina Alacantina.
-        </p>
-
-        <div class="space-y-3 pt-2">
-          <a href="https://www.clubalacantina.com/" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3.5 border border-slate-800 rounded-xl bg-slate-950 hover:bg-slate-800/60 transition group touch-target">
-            <div class="flex items-center gap-3">
-              <span class="text-xl">🌐</span>
-              <div>
-                <p class="text-xs font-bold text-slate-200 group-hover:text-blue-400">Página Web Oficial</p>
-                <p class="text-[10px] text-slate-400">clubalacantina.com</p>
-              </div>
-            </div>
-            <span class="text-xs text-slate-500 group-hover:text-blue-400 font-bold">→</span>
-          </a>
-
-          <a href="https://www.youtube.com/channel/UCiW1IoJmsL_f55NOdAKWuRw" target="_blank" rel="noopener noreferrer" class="flex items-center justify-between p-3.5 border border-slate-800 rounded-xl bg-slate-950 hover:bg-slate-800/60 transition group touch-target">
-            <div class="flex items-center gap-3">
-              <span class="text-xl">🎥</span>
-              <div>
-                <p class="text-xs font-bold text-slate-200 group-hover:text-red-400">Canal de YouTube</p>
-                <p class="text-[10px] text-slate-400">Vídeos y divulgación</p>
-              </div>
-            </div>
-            <span class="text-xs text-slate-500 group-hover:text-red-400 font-bold">→</span>
-          </a>
-        </div>
-      </section>
-    </div>
-
-    <!-- PESTAÑA 4: GESTIÓN (SOLO INSPECTORES / ADMINS) -->
-    <div id="tab-gestion" class="hidden space-y-6">
-      <section class="bg-amber-950/30 p-5 rounded-2xl border border-amber-800/40 shadow-xl">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-amber-900/40">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
-              <span>🛡️</span> Validación Pre-Libro
-            </h2>
-            <p class="text-[11px] text-amber-300/70">Inspectores y Gestores</p>
-          </div>
-          <button onclick="cargarCensoGlobal()" type="button" class="text-xs bg-amber-900/50 hover:bg-amber-800 text-amber-200 border border-amber-700/50 px-3 py-2 rounded-xl font-semibold touch-target flex items-center">🔄 Refrescar</button>
-        </div>
-
-        <div id="lista-global-ejemplares" class="space-y-3 text-xs text-slate-400">
-          Cargando solicitudes de todos los criadores...
-        </div>
-      </section>
-    </div>
-
-    <!-- PESTAÑA 5: AJUSTES E INFORMES -->
-    <div id="tab-ajustes" class="hidden space-y-6">
-      <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
-        <div class="border-b border-slate-800 pb-3">
-          <h2 class="text-base font-bold text-blue-400 flex items-center gap-2">
-            <span>⚙️</span> Ajustes e Informes
-          </h2>
-          <p class="text-xs text-slate-400">Generación e impresión de censos oficiales</p>
-        </div>
-
-        <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Filtros del Listado</h3>
-          
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-400 mb-1">ESTADO LIBRO</label>
-              <select id="filtro-estado" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
-                <option value="TODOS">Todos los estados</option>
-                <option value="Inscrito Oficial">Inscritos Oficiales</option>
-                <option value="Pendiente">Pendientes de revisión</option>
-                <option value="Rechazado">Rechazados</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-400 mb-1">SEXO</label>
-              <select id="filtro-sexo" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
-                <option value="TODOS">Macho y Hembra</option>
-                <option value="Gallo">Gallos</option>
-                <option value="Gallina">Gallinas</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-400 mb-1">VARIEDAD DE COLOR</label>
-            <select id="filtro-variedad" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
-              <option value="TODOS">Todas las variedades</option>
-              <option value="Blanco">Blanco</option>
-              <option value="Negro Moteado">Negro Moteado</option>
-              <option value="Pinto/Exchequer">Pinto / Exchequer</option>
-              <option value="Armiñada en negro">Armiñada en negro</option>
-              <option value="Milflores">Milflores</option>
+            <label class="block text-xs text-slate-400 mb-1">Filtrar por Estado</label>
+            <select id="filtro-estado" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+              <option value="Todos">Todos los estados</option>
+              <option value="Apto">Apto (Pre-Libro)</option>
+              <option value="Pendiente">Pendiente de Inspección</option>
+              <option value="No Apto">No Apto</option>
             </select>
           </div>
-
-          <div id="div-filtro-alcance" class="pt-2 border-t border-slate-800">
-            <label class="block text-[11px] font-semibold text-amber-400 mb-1">ALCANCE DEL REPORTE</label>
-            <select id="filtro-alcance" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
-              <option value="MIS_ANIMALES">Solo mis ejemplares registrados</option>
-              <option value="TODOS_CRIADORES" id="opt-todos-criadores" class="hidden">Censo global de todos los criadores</option>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Filtrar por Variedad</label>
+            <select id="filtro-variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+              <option value="Todas">Todas las variedades</option>
+              <option value="Apercada">Apercada</option>
+              <option value="Silvestre">Silvestre</option>
+              <option value="Negra">Negra</option>
+              <option value="Blanca">Blanca</option>
+              <option value="Francisca">Francisca</option>
             </select>
           </div>
-
-          <div class="flex gap-2 pt-2">
-            <button onclick="generarReporte()" type="button" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md touch-target flex items-center justify-center gap-1.5">
-              <span>📋</span> Generar Vista Previa
+          <div class="flex items-end gap-2">
+            <button onclick="filtrarInformes()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
+              Generar Informe
             </button>
-            <button onclick="imprimirListado()" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-md touch-target flex items-center gap-1.5">
-              <span>🖨️</span> Imprimir / PDF
+            <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">
+              🖨
             </button>
           </div>
         </div>
+      </div>
 
-        <div id="areaImpresion" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
-          <p class="text-slate-400 text-center italic">Aplica los filtros requeridos y pulsa "Generar Vista Previa".</p>
+      <!-- VISTA IMPRESA / PREVISUALIZACIÓN -->
+      <div id="resultado-informe" class="space-y-4">
+        <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
+          Haz clic en "Generar Informe" para construir la lista filtrada.
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
+    <section id="sec-estandar" class="hidden space-y-4">
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-semibold text-amber-400">Estándar Racial Oficial (FESACOCUR)</h2>
+          <p class="text-xs text-slate-400">Patrón de la Raza Gallina Alacantina (Código ESGA025)</p>
+        </div>
+        <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
+          Abrir FESACOCUR ↗
+        </a>
+      </div>
+      <div class="bg-slate-800 p-2 rounded-xl border border-slate-700 h-[600px]">
+        <iframe src="https://fesacocur.es" class="w-full h-full rounded-lg" title="Estándar Oficial FESACOCUR"></iframe>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 5: PANEL DE VALIDACIÓN (ADMIN/INSPECTOR) -->
+    <section id="sec-gestion" class="hidden space-y-4">
+      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+        <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Control de Inspecciones</h2>
+        <p class="text-sm text-slate-400 mb-4">Aprobación o rechazo definitivo de ejemplares para la inscripción en el Libro Genealógico Oficial ESGA025.</p>
+        <div id="lista-inspeccion" class="space-y-3">
+          <!-- Cargado por JS -->
+        </div>
+      </div>
+    </section>
 
   </main>
 
-  <!-- NAVEGACIÓN INFERIOR -->
-  <nav id="nav-tabs" class="hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 shadow-2xl z-50">
-    <div class="max-w-xl mx-auto flex justify-around text-center p-1">
-      <button onclick="cambiarPestana('censo')" id="tab-btn-censo" class="flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target">
-        <span class="text-lg">🐓</span>
-        <span>Mi Corral</span>
-      </button>
-      <button onclick="cambiarPestana('estandar')" id="tab-btn-estandar" class="flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target">
-        <span class="text-lg">📖</span>
-        <span>Estándar</span>
-      </button>
-      <button onclick="cambiarPestana('club')" id="tab-btn-club" class="flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target">
-        <span class="text-lg">🌐</span>
-        <span>El Club</span>
-      </button>
-      <button onclick="cambiarPestana('gestion')" id="tab-btn-gestion" class="hidden flex-1 py-3 text-xs font-semibold text-amber-400 flex flex-col items-center gap-1 touch-target">
-        <span class="text-lg">🛡️</span>
-        <span>Gestión</span>
-      </button>
-      <button onclick="cambiarPestana('ajustes')" id="tab-btn-ajustes" class="flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target">
-        <span class="text-lg">⚙️</span>
-        <span>Ajustes</span>
-      </button>
-    </div>
+  <!-- NAVEGACIÓN INFERIOR MÓVIL (FIXED) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around p-2 z-50 no-print">
+    <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center p-2 text-amber-400 touch-target">
+      <span class="text-lg">📝</span>
+      <span class="text-[10px]">Alta</span>
+    </button>
+    <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center p-2 text-slate-400 touch-target">
+      <span class="text-lg">📋</span>
+      <span class="text-[10px]">Censo</span>
+    </button>
+    <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center p-2 text-slate-400 touch-target">
+      <span class="text-lg">📊</span>
+      <span class="text-[10px]">Informes</span>
+    </button>
+    <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center p-2 text-slate-400 touch-target">
+      <span class="text-lg">📖</span>
+      <span class="text-[10px]">Estándar</span>
+    </button>
+    <button onclick="switchTab('gestion')" id="mob-gestion" class="flex flex-col items-center p-2 text-slate-400 touch-target hidden">
+      <span class="text-lg">🛡️</span>
+      <span class="text-[10px]">Validar</span>
+    </button>
   </nav>
 
-  <script>
-    const SUPABASE_URL = "https://htbyipavphxcehdwrjbl.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0YnlpcGF2cGh4Y2VoZHdyamJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjQyOTEsImV4cCI6MjEwNjYwMDI5MX0.tnBJERxhI3YbwSOFVkeBvvz5qm6FNxzBZ8_5S-UKoQM";
-    
-    let db = null;
-    let usuarioActual = null;
-    let esAdministrador = false;
-
-    function obtenerClienteSupabase() {
-      if (!db) {
-        if (window.supabase && typeof window.supabase.createClient === 'function') {
-          db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } else {
-          throw new Error("No se ha cargado la librería de Supabase.");
-        }
-      }
-      return db;
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      try {
-        obtenerClienteSupabase();
-        comprobarSesion();
-      } catch (e) {
-        const msg = document.getElementById('auth-msg');
-        if (msg) msg.textContent = "Error al iniciar: " + e.message;
-      }
-
-      const formEjemplar = document.getElementById('form-ejemplar');
-      if (formEjemplar) formEjemplar.addEventListener('submit', guardarEjemplar);
-
-      const btnRefresh = document.getElementById('btn-refresh');
-      if (btnRefresh) btnRefresh.addEventListener('click', cargarCenso);
-    });
-
-    function cambiarPestana(pestana) {
-      const tabs = ['censo', 'estandar', 'club', 'gestion', 'ajustes'];
-      tabs.forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
-        const btn = document.getElementById(`tab-btn-${t}`);
-        if (btn) btn.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
-      });
-
-      document.getElementById(`tab-${pestana}`).classList.remove('hidden');
-      const activeBtn = document.getElementById(`tab-btn-${pestana}`);
-      const activeColor = pestana === 'gestion' ? 'amber' : 'blue';
-      if (activeBtn) {
-        activeBtn.className = `flex-1 py-3 text-xs font-bold text-${activeColor}-400 border-t-2 border-${activeColor}-500 flex flex-col items-center gap-1 touch-target`;
-      }
-
-      if (pestana === 'gestion') cargarCensoGlobal();
-    }
-
-    async function comprobarSesion() {
-      try {
-        const client = obtenerClienteSupabase();
-        const { data: { session } } = await client.auth.getSession();
-        
-        if (session) {
-          usuarioActual = session.user;
-
-          const { data: perfil } = await client
-            .from('perfiles')
-            .select('rol')
-            .eq('id', usuarioActual.id)
-            .maybeSingle();
-
-          esAdministrador = perfil && (perfil.rol === 'admin' || perfil.rol === 'inspector');
-
-          if (esAdministrador) {
-            document.getElementById('tab-btn-gestion').classList.remove('hidden');
-            document.getElementById('opt-todos-criadores').classList.remove('hidden');
-          } else {
-            document.getElementById('tab-btn-gestion').classList.add('hidden');
-            document.getElementById('opt-todos-criadores').classList.add('hidden');
-          }
-
-          document.getElementById('sec-auth').classList.add('hidden');
-          document.getElementById('nav-tabs').classList.remove('hidden');
-          document.getElementById('tab-censo').classList.remove('hidden');
-          document.getElementById('btn-logout').classList.remove('hidden');
-          
-          cargarCenso();
-        } else {
-          document.getElementById('sec-auth').classList.remove('hidden');
-          document.getElementById('nav-tabs').classList.add('hidden');
-          ['censo', 'estandar', 'club', 'gestion', 'ajustes'].forEach(t => {
-            document.getElementById(`tab-${t}`).classList.add('hidden');
-          });
-          document.getElementById('btn-logout').classList.add('hidden');
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    async function registrarse() {
-      const msg = document.getElementById('auth-msg');
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-
-      if (!email || !password) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Introduce correo y contraseña.";
-        return;
-      }
-
-      msg.style.color = "#60a5fa";
-      msg.textContent = "Procesando registro...";
-
-      try {
-        const client = obtenerClienteSupabase();
-        const { error } = await client.auth.signUp({ email, password });
-        if (error) {
-          msg.style.color = "#f87171";
-          msg.textContent = "Error: " + error.message;
-        } else {
-          msg.style.color = "#4ade80";
-          msg.textContent = "¡Registro correcto! Inicia sesión ahora.";
-        }
-      } catch (err) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Error inesperado: " + err.message;
-      }
-    }
-
-    async function iniciarSesion() {
-      const msg = document.getElementById('auth-msg');
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-
-      if (!email || !password) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Introduce correo y contraseña.";
-        return;
-      }
-
-      msg.style.color = "#60a5fa";
-      msg.textContent = "Iniciando sesión...";
-
-      try {
-        const client = obtenerClienteSupabase();
-        const { error } = await client.auth.signInWithPassword({ email, password });
-        if (error) {
-          msg.style.color = "#f87171";
-          msg.textContent = "Error: " + error.message;
-        } else {
-          msg.textContent = "";
-          comprobarSesion();
-        }
-      } catch (err) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Error inesperado: " + err.message;
-      }
-    }
-
-    async function recuperarPassword() {
-      const msg = document.getElementById('auth-msg');
-      const email = document.getElementById('auth-email').value.trim();
-
-      if (!email) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Escribe tu correo en la casilla de arriba.";
-        return;
-      }
-
-      msg.style.color = "#60a5fa";
-      msg.textContent = "Enviando enlace de recuperación...";
-
-      try {
-        const client = obtenerClienteSupabase();
-        const { error } = await client.auth.resetPasswordForEmail(email, {
-          redirectTo: 'https://alacantinapp.vercel.app'
-        });
-
-        if (error) {
-          msg.style.color = "#f87171";
-          msg.textContent = "Error: " + error.message;
-        } else {
-          msg.style.color = "#4ade80";
-          msg.textContent = "¡Correo enviado! Revisa tu bandeja.";
-        }
-      } catch (err) {
-        msg.style.color = "#f87171";
-        msg.textContent = "Error al enviar: " + err.message;
-      }
-    }
-
-    async function cerrarSesion() {
-      try {
-        const client = obtenerClienteSupabase();
-        await client.auth.signOut();
-        comprobarSesion();
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    async function guardarEjemplar(e) {
-      e.preventDefault();
-      const sexo = document.getElementById('sexo').value;
-      
-      const nuevoAnimal = {
-        nombre_criador: document.getElementById('nombre_criador').value,
-        rega: document.getElementById('rega').value,
-        anilla: document.getElementById('anilla').value,
-        sexo: sexo,
-        diametro_anilla: sexo === 'Gallo' ? 20 : 18,
-        peso_gramos: parseInt(document.getElementById('peso').value) || null,
-        variedad_color: document.getElementById('variedad').value,
-        ano_nacimiento: parseInt(document.getElementById('ano_nacimiento').value) || new Date().getFullYear(),
-        anilla_padre: document.getElementById('anilla_padre').value || null,
-        anilla_madre: document.getElementById('anilla_madre').value || null,
-        estado_prelibro: 'Pendiente',
-        id_criador: usuarioActual.id
-      };
-
-      const client = obtenerClienteSupabase();
-      const { error } = await client.from('ejemplares').insert([nuevoAnimal]);
-
-      if (error) {
-        alert("Error al guardar: " + error.message);
-      } else {
-        alert("Ejemplar registrado correctamente.");
-        document.getElementById('form-ejemplar').reset();
-        cargarCenso();
-      }
-    }
-
-    async function cargarCenso() {
-      const contenedor = document.getElementById('lista-ejemplares');
-      contenedor.innerHTML = "Cargando censo...";
-
-      const client = obtenerClienteSupabase();
-      const { data, error } = await client.from('ejemplares').select('*').eq('id_criador', usuarioActual.id).order('creado_el', { ascending: false });
-
-      if (error) {
-        contenedor.innerHTML = "Error al obtener registros: " + error.message;
-        return;
-      }
-
-      if (data.length === 0) {
-        contenedor.innerHTML = "No tienes ningún ejemplar registrado aún.";
-        return;
-      }
-
-      contenedor.innerHTML = '';
-      data.forEach(el => {
-        let badgeColor = "bg-amber-950/80 text-amber-300 border-amber-800/60";
-        if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800/60";
-        if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800/60";
-
-        const datosJson = JSON.stringify(el).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
-        contenedor.innerHTML += `
-          <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-950 flex flex-col gap-2">
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-slate-100 text-sm">${el.anilla}</span>
-                  <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
-                </div>
-                <p class="text-slate-300 mt-1"><strong>Variedad:</strong> ${el.variedad_color}</p>
-                <p class="text-slate-400"><strong>Criador:</strong> ${el.nombre_criador || '-'} (${el.rega || 'REGA no indic.'})</p>
-                <p class="text-slate-400"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Año:</strong> ${el.ano_nacimiento || '-'}</p>
-              </div>
-            </div>
-            <div class="pt-2 border-t border-slate-800/80 flex justify-end">
-              <button onclick='descargarFichaPDF(${datosJson})' class="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
-                📄 Ficha PDF
-              </button>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    async function cargarCensoGlobal() {
-      const contenedor = document.getElementById('lista-global-ejemplares');
-      contenedor.innerHTML = "Cargando registros globales...";
-
-      const client = obtenerClienteSupabase();
-      const { data, error } = await client.from('ejemplares').select('*').order('creado_el', { ascending: false });
-
-      if (error) {
-        contenedor.innerHTML = "Error al cargar datos: " + error.message;
-        return;
-      }
-
-      if (data.length === 0) {
-        contenedor.innerHTML = "No hay registros en la base de datos central.";
-        return;
-      }
-
-      contenedor.innerHTML = '';
-      data.forEach(el => {
-        let badgeColor = "bg-amber-950/80 text-amber-300 border-amber-800/60";
-        if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800/60";
-        if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800/60";
-
-        const datosJson = JSON.stringify(el).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-
-        contenedor.innerHTML += `
-          <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-950 flex flex-col gap-2.5">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-slate-100 text-sm">${el.anilla}</span>
-              <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
-            </div>
-            <div class="text-[11px] text-slate-300 space-y-0.5">
-              <p><strong>Criador:</strong> ${el.nombre_criador || '-'} | <strong>REGA:</strong> ${el.rega || '-'}</p>
-              <p><strong>Variedad:</strong> ${el.variedad_color} | <strong>Sexo:</strong> ${el.sexo}</p>
-              <p><strong>Padre:</strong> ${el.anilla_padre || '-'} | <strong>Madre:</strong> ${el.anilla_madre || '-'}</p>
-            </div>
-            <div class="flex gap-2 pt-2 border-t border-slate-800">
-              <button onclick="cambiarEstado('${el.id}', 'Inscrito Oficial')" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs touch-target">Validar</button>
-              <button onclick="cambiarEstado('${el.id}', 'Rechazado')" class="flex-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 font-bold py-2 rounded-lg text-xs touch-target">Rechazar</button>
-              <button onclick='descargarFichaPDF(${datosJson})' class="bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold px-3 py-2 rounded-lg text-xs border border-slate-700 touch-target">PDF</button>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    async function cambiarEstado(idRecord, nuevoEstado) {
-      const client = obtenerClienteSupabase();
-      const { error } = await client.from('ejemplares').update({ estado_prelibro: nuevoEstado }).eq('id', idRecord);
-      if (error) {
-        alert("Error al actualizar estado: " + error.message);
-      } else {
-        cargarCensoGlobal();
-      }
-    }
-
-    // EXPORTAR FICHA INDIVIDUAL A PDF
-    function descargarFichaPDF(ejemplar) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 25, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.text("ASOCIACIÓN CLUB GALLINA ALACANTINA", 14, 12);
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("Ficha Oficial de Registro - Libro Genealógico (ESGA025)", 14, 18);
-
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`ANILLA: ${ejemplar.anilla}`, 14, 35);
-
-      doc.autoTable({
-        startY: 40,
-        head: [['Concepto', 'Detalle']],
-        body: [
-          ['Nombre del Criador', ejemplar.nombre_criador || 'No indicado'],
-          ['Código REGA', ejemplar.rega || 'No indicado'],
-          ['Estado Pre-Libro', ejemplar.estado_prelibro || 'Pendiente'],
-          ['Variedad de Color', ejemplar.variedad_color || '-'],
-          ['Sexo / Diámetro', `${ejemplar.sexo || '-'} (${ejemplar.diametro_anilla || '-'} mm)`],
-          ['Año de Nacimiento', ejemplar.ano_nacimiento || '-'],
-          ['Peso (Gramos)', ejemplar.peso_gramos ? `${ejemplar.peso_gramos} g` : 'No registrado'],
-          ['Anilla Padre', ejemplar.anilla_padre || '-'],
-          ['Anilla Madre', ejemplar.anilla_madre || '-'],
-          ['Fecha de Registro', ejemplar.creado_el ? new Date(ejemplar.creado_el).toLocaleDateString('es-ES') : '-']
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
-        styles: { fontSize: 10, cellPadding: 4 }
-      });
-
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text("Documento expedido por el sistema AlacantinApp - Club Gallina Alacantina", 14, doc.lastAutoTable.finalY + 15);
-
-      doc.save(`Ficha_${ejemplar.anilla}.pdf`);
-    }
-
-    // LÓGICA DE REPORTES GENERALES
-    async function generarReporte() {
-      const area = document.getElementById('areaImpresion');
-      area.innerHTML = "<p class='text-slate-400 text-center'>Generando reporte...</p>";
-
-      const estado = document.getElementById('filtro-estado').value;
-      const sexo = document.getElementById('filtro-sexo').value;
-      const variedad = document.getElementById('filtro-variedad').value;
-      const alcance = document.getElementById('filtro-alcance').value;
-
-      const client = obtenerClienteSupabase();
-      let query = client.from('ejemplares').select('*');
-
-      if (alcance === 'MIS_ANIMALES' || !esAdministrador) {
-        query = query.eq('id_criador', usuarioActual.id);
-      }
-
-      if (estado !== 'TODOS') query = query.eq('estado_prelibro', estado);
-      if (sexo !== 'TODOS') query = query.eq('sexo', sexo);
-      if (variedad !== 'TODOS') query = query.eq('variedad_color', variedad);
-
-      const { data, error } = await query.order('anilla', { ascending: true });
-
-      if (error) {
-        area.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
-        return;
-      }
-
-      if (data.length === 0) {
-        area.innerHTML = `<p class="text-amber-400 text-center italic">No hay ningún ejemplar que coincida con los filtros seleccionados.</p>`;
-        return;
-      }
-
-      const fechaHoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-      let html = `
-        <div class="space-y-2 mb-4 pb-3 border-b border-slate-700">
-          <div class="flex justify-between items-center">
-            <h2 class="font-bold text-sm text-slate-100 uppercase">Asociación Club Gallina Alacantina (ESGA025)</h2>
-            <span class="text-[10px] text-slate-400">Fecha: ${fechaHoy}</span>
-          </div>
-          <p class="text-xs font-semibold text-blue-400">Censo de Pre-Libro Genealógico - ${data.length} Ejemplares</p>
+  <!-- MODAL DE AUTENTICACIÓN / LOGIN -->
+  <div id="modal-auth" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 max-w-sm w-full space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-lg text-amber-400">Acceso a AlacantinApp</h3>
+        <button onclick="toggleAuthModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <form onsubmit="handleAuth(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Correo Electrónico</label>
+          <input type="email" id="auth-email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:border-amber-400 focus:outline-none">
         </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Contraseña</label>
+          <input type="password" id="auth-password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:border-amber-400 focus:outline-none">
+        </div>
+        <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
+          Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
 
-        <table class="tabla-impresion text-xs w-full text-slate-200">
-          <thead>
-            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400">
-              <th class="p-2 text-left">Anilla</th>
-              <th class="p-2 text-left">Criador / REGA</th>
-              <th class="p-2 text-left">Sexo</th>
-              <th class="p-2 text-left">Variedad</th>
-              <th class="p-2 text-left">Año</th>
-              <th class="p-2 text-left">Padre / Madre</th>
-              <th class="p-2 text-left">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      data.forEach(el => {
-        html += `
-          <tr class="border-b border-slate-800/60">
-            <td class="p-2 font-bold">${el.anilla}</td>
-            <td class="p-2 text-[10px]">${el.nombre_criador || '-'} (${el.rega || '-'})</td>
-            <td class="p-2">${el.sexo} (${el.diametro_anilla}mm)</td>
-            <td class="p-2">${el.variedad_color}</td>
-            <td class="p-2">${el.ano_nacimiento || '-'}</td>
-            <td class="p-2 text-[10px]">${el.anilla_padre || '-'} / ${el.anilla_madre || '-'}</td>
-            <td class="p-2 font-semibold text-[10px]">${el.estado_prelibro || 'Pendiente'}</td>
-          </tr>
-        `;
-      });
-
-      html += `
-          </tbody>
-        </table>
-      `;
-
-      area.innerHTML = html;
-    }
-
-    function imprimirListado() {
-      const contenido = document.getElementById('areaImpresion').innerHTML;
-      if (!contenido || contenido.includes('Aplica los filtros') || contenido.includes('Generando')) {
-        alert("Por favor, genera primero una vista previa antes de imprimir.");
-        return;
-      }
-      window.print();
-    }
-  </script>
+  <!-- SCRIPTS DE LA APLICACIÓN -->
+  <script src="app.js"></script>
+  <script src="pdf-engine.js"></script>
 </body>
 </html>
