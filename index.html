@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pre-Libro Gallina Alacantina (ESGA025)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SDK Oficial Supabase (Versión UMD compatible) -->
+  <!-- SDK Oficial Supabase (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- jsPDF y AutoTable para exportación a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
   <style>
-    .touch-target {
-      min-height: 48px;
-    }
-    /* Estilos específicos para impresión */
+    .touch-target { min-height: 48px; }
     @media print {
       body { background-color: #ffffff !important; color: #000000 !important; }
       header, nav, #sec-auth, #form-ejemplar, .no-imprimir { display: none !important; }
@@ -24,7 +25,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans pb-28 min-h-screen">
 
-  <!-- Header compacto -->
+  <!-- Header -->
   <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 text-white p-4 sticky top-0 z-40">
     <div class="max-w-xl mx-auto flex justify-between items-center gap-3">
       <div class="flex items-center gap-3">
@@ -80,7 +81,7 @@
       </form>
     </section>
 
-    <!-- PESTAÑA 1: CENSO Y REGISTRO DEL CRIADOR -->
+    <!-- PESTAÑA 1: MI CORRAL (REGISTRO Y CENSO DEL CRIADOR) -->
     <div id="tab-censo" class="hidden space-y-6">
 
       <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl">
@@ -88,6 +89,18 @@
           <span>🐓</span> Declarar Ejemplar
         </h2>
         <form id="form-ejemplar" class="space-y-4">
+
+          <!-- DATOS DEL CRIADOR Y REGA -->
+          <div class="grid grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5">NOMBRE / CRIADOR *</label>
+              <input type="text" id="nombre_criador" placeholder="Nombre completo" required class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1.5">CÓDIGO REGA *</label>
+              <input type="text" id="rega" placeholder="ES123456789" required class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:ring-2 focus:ring-blue-500/50 outline-none">
+            </div>
+          </div>
           
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -159,7 +172,7 @@
 
     </div>
 
-    <!-- PESTAÑA 2: ESTÁNDAR RACIAL (PDF COMPLETO Y DESCARGA) -->
+    <!-- PESTAÑA 2: ESTÁNDAR RACIAL -->
     <div id="tab-estandar" class="hidden space-y-4">
       <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -173,7 +186,6 @@
           </a>
         </div>
 
-        <!-- Visor del PDF incrustado -->
         <div class="w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800" style="height: 70vh; min-height: 480px;">
           <iframe 
             src="Estandar-Alacantina2025.pdf" 
@@ -188,7 +200,7 @@
       </section>
     </div>
 
-    <!-- PESTAÑA 3: EL CLUB & ENLACES -->
+    <!-- PESTAÑA 3: EL CLUB -->
     <div id="tab-club" class="hidden space-y-4">
       <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
         <h2 class="text-base font-bold text-blue-400 border-b border-slate-800 pb-3">Asociación Club Gallina Alacantina</h2>
@@ -223,7 +235,7 @@
       </section>
     </div>
 
-    <!-- PESTAÑA 4 (ADMIN/GESTOR): PANEL DEL LIBRO GENEALÓGICO -->
+    <!-- PESTAÑA 4: GESTIÓN (SOLO INSPECTORES / ADMINS) -->
     <div id="tab-gestion" class="hidden space-y-6">
       <section class="bg-amber-950/30 p-5 rounded-2xl border border-amber-800/40 shadow-xl">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-amber-900/40">
@@ -242,7 +254,7 @@
       </section>
     </div>
 
-    <!-- PESTAÑA 5: AJUSTES E IMPRESIÓN DE LISTADOS -->
+    <!-- PESTAÑA 5: AJUSTES E INFORMES -->
     <div id="tab-ajustes" class="hidden space-y-6">
       <section class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-4">
         <div class="border-b border-slate-800 pb-3">
@@ -252,7 +264,6 @@
           <p class="text-xs text-slate-400">Generación e impresión de censos oficiales</p>
         </div>
 
-        <!-- Filtros de Generación de Reporte -->
         <div class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
           <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Filtros del Listado</h3>
           
@@ -289,7 +300,6 @@
             </select>
           </div>
 
-          <!-- Filtro de alcance (Solo visible o modificable si es admin) -->
           <div id="div-filtro-alcance" class="pt-2 border-t border-slate-800">
             <label class="block text-[11px] font-semibold text-amber-400 mb-1">ALCANCE DEL REPORTE</label>
             <select id="filtro-alcance" class="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 outline-none">
@@ -308,7 +318,6 @@
           </div>
         </div>
 
-        <!-- Área interactiva e imprimible de la vista previa -->
         <div id="areaImpresion" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs">
           <p class="text-slate-400 text-center italic">Aplica los filtros requeridos y pulsa "Generar Vista Previa".</p>
         </div>
@@ -317,7 +326,7 @@
 
   </main>
 
-  <!-- NAVEGACIÓN INFERIOR (Ergonómica para manejo con el pulgar) -->
+  <!-- NAVEGACIÓN INFERIOR -->
   <nav id="nav-tabs" class="hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 shadow-2xl z-50">
     <div class="max-w-xl mx-auto flex justify-around text-center p-1">
       <button onclick="cambiarPestana('censo')" id="tab-btn-censo" class="flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target">
@@ -351,7 +360,6 @@
     let usuarioActual = null;
     let esAdministrador = false;
 
-    // Inicialización del cliente Supabase
     function obtenerClienteSupabase() {
       if (!db) {
         if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -380,47 +388,21 @@
     });
 
     function cambiarPestana(pestana) {
-      const tabCenso = document.getElementById('tab-censo');
-      const tabEstandar = document.getElementById('tab-estandar');
-      const tabClub = document.getElementById('tab-club');
-      const tabGestion = document.getElementById('tab-gestion');
-      const tabAjustes = document.getElementById('tab-ajustes');
+      const tabs = ['censo', 'estandar', 'club', 'gestion', 'ajustes'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (btn) btn.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
+      });
 
-      const btnCenso = document.getElementById('tab-btn-censo');
-      const btnEstandar = document.getElementById('tab-btn-estandar');
-      const btnClub = document.getElementById('tab-btn-club');
-      const btnGestion = document.getElementById('tab-btn-gestion');
-      const btnAjustes = document.getElementById('tab-btn-ajustes');
-
-      tabCenso.classList.add('hidden');
-      tabEstandar.classList.add('hidden');
-      tabClub.classList.add('hidden');
-      tabGestion.classList.add('hidden');
-      tabAjustes.classList.add('hidden');
-
-      btnCenso.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
-      btnEstandar.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
-      btnClub.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
-      btnGestion.className = "flex-1 py-3 text-xs font-semibold text-amber-400 flex flex-col items-center gap-1 touch-target";
-      btnAjustes.className = "flex-1 py-3 text-xs font-semibold text-slate-400 flex flex-col items-center gap-1 touch-target";
-
-      if (pestana === 'censo') {
-        tabCenso.classList.remove('hidden');
-        btnCenso.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target";
-      } else if (pestana === 'estandar') {
-        tabEstandar.classList.remove('hidden');
-        btnEstandar.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target";
-      } else if (pestana === 'club') {
-        tabClub.classList.remove('hidden');
-        btnClub.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target";
-      } else if (pestana === 'gestion') {
-        tabGestion.classList.remove('hidden');
-        btnGestion.className = "flex-1 py-3 text-xs font-bold text-amber-400 border-t-2 border-amber-500 flex flex-col items-center gap-1 touch-target";
-        cargarCensoGlobal();
-      } else if (pestana === 'ajustes') {
-        tabAjustes.classList.remove('hidden');
-        btnAjustes.className = "flex-1 py-3 text-xs font-bold text-blue-400 border-t-2 border-blue-500 flex flex-col items-center gap-1 touch-target";
+      document.getElementById(`tab-${pestana}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${pestana}`);
+      const activeColor = pestana === 'gestion' ? 'amber' : 'blue';
+      if (activeBtn) {
+        activeBtn.className = `flex-1 py-3 text-xs font-bold text-${activeColor}-400 border-t-2 border-${activeColor}-500 flex flex-col items-center gap-1 touch-target`;
       }
+
+      if (pestana === 'gestion') cargarCensoGlobal();
     }
 
     async function comprobarSesion() {
@@ -456,11 +438,9 @@
         } else {
           document.getElementById('sec-auth').classList.remove('hidden');
           document.getElementById('nav-tabs').classList.add('hidden');
-          document.getElementById('tab-censo').classList.add('hidden');
-          document.getElementById('tab-estandar').classList.add('hidden');
-          document.getElementById('tab-club').classList.add('hidden');
-          document.getElementById('tab-gestion').classList.add('hidden');
-          document.getElementById('tab-ajustes').classList.add('hidden');
+          ['censo', 'estandar', 'club', 'gestion', 'ajustes'].forEach(t => {
+            document.getElementById(`tab-${t}`).classList.add('hidden');
+          });
           document.getElementById('btn-logout').classList.add('hidden');
         }
       } catch (e) {
@@ -484,7 +464,7 @@
 
       try {
         const client = obtenerClienteSupabase();
-        const { data, error } = await client.auth.signUp({ email, password });
+        const { error } = await client.auth.signUp({ email, password });
         if (error) {
           msg.style.color = "#f87171";
           msg.textContent = "Error: " + error.message;
@@ -514,7 +494,7 @@
 
       try {
         const client = obtenerClienteSupabase();
-        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) {
           msg.style.color = "#f87171";
           msg.textContent = "Error: " + error.message;
@@ -575,6 +555,8 @@
       const sexo = document.getElementById('sexo').value;
       
       const nuevoAnimal = {
+        nombre_criador: document.getElementById('nombre_criador').value,
+        rega: document.getElementById('rega').value,
         anilla: document.getElementById('anilla').value,
         sexo: sexo,
         diametro_anilla: sexo === 'Gallo' ? 20 : 18,
@@ -588,7 +570,7 @@
       };
 
       const client = obtenerClienteSupabase();
-      const { data, error } = await client.from('ejemplares').insert([nuevoAnimal]);
+      const { error } = await client.from('ejemplares').insert([nuevoAnimal]);
 
       if (error) {
         alert("Error al guardar: " + error.message);
@@ -622,15 +604,25 @@
         if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800/60";
         if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800/60";
 
+        const datosJson = JSON.stringify(el).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
         contenedor.innerHTML += `
-          <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-950 flex justify-between items-start">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-slate-100 text-sm">${el.anilla}</span>
-                <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
+          <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-950 flex flex-col gap-2">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-slate-100 text-sm">${el.anilla}</span>
+                  <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
+                </div>
+                <p class="text-slate-300 mt-1"><strong>Variedad:</strong> ${el.variedad_color}</p>
+                <p class="text-slate-400"><strong>Criador:</strong> ${el.nombre_criador || '-'} (${el.rega || 'REGA no indic.'})</p>
+                <p class="text-slate-400"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Año:</strong> ${el.ano_nacimiento || '-'}</p>
               </div>
-              <p class="text-slate-300 mt-1"><strong>Variedad:</strong> ${el.variedad_color}</p>
-              <p class="text-slate-400"><strong>Sexo:</strong> ${el.sexo} (${el.diametro_anilla}mm) | <strong>Año:</strong> ${el.ano_nacimiento || '-'}</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800/80 flex justify-end">
+              <button onclick='descargarFichaPDF(${datosJson})' class="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                📄 Ficha PDF
+              </button>
             </div>
           </div>
         `;
@@ -660,6 +652,8 @@
         if (el.estado_prelibro === 'Inscrito Oficial') badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800/60";
         if (el.estado_prelibro === 'Rechazado') badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800/60";
 
+        const datosJson = JSON.stringify(el).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
         contenedor.innerHTML += `
           <div class="p-3.5 border border-slate-800 rounded-xl bg-slate-950 flex flex-col gap-2.5">
             <div class="flex justify-between items-center">
@@ -667,13 +661,14 @@
               <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${badgeColor}">${el.estado_prelibro || 'Pendiente'}</span>
             </div>
             <div class="text-[11px] text-slate-300 space-y-0.5">
+              <p><strong>Criador:</strong> ${el.nombre_criador || '-'} | <strong>REGA:</strong> ${el.rega || '-'}</p>
               <p><strong>Variedad:</strong> ${el.variedad_color} | <strong>Sexo:</strong> ${el.sexo}</p>
               <p><strong>Padre:</strong> ${el.anilla_padre || '-'} | <strong>Madre:</strong> ${el.anilla_madre || '-'}</p>
-              <p class="text-slate-500 text-[10px]">ID Criador: ${el.id_criador}</p>
             </div>
             <div class="flex gap-2 pt-2 border-t border-slate-800">
-              <button onclick="cambiarEstado('${el.id}', 'Inscrito Oficial')" class="flex-1 bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold py-2 rounded-lg text-xs touch-target">Validar</button>
+              <button onclick="cambiarEstado('${el.id}', 'Inscrito Oficial')" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs touch-target">Validar</button>
               <button onclick="cambiarEstado('${el.id}', 'Rechazado')" class="flex-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 font-bold py-2 rounded-lg text-xs touch-target">Rechazar</button>
+              <button onclick='descargarFichaPDF(${datosJson})' class="bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold px-3 py-2 rounded-lg text-xs border border-slate-700 touch-target">PDF</button>
             </div>
           </div>
         `;
@@ -690,7 +685,56 @@
       }
     }
 
-    // LÓGICA DE REPORTES E IMPRESIÓN
+    // EXPORTAR FICHA INDIVIDUAL A PDF
+    function descargarFichaPDF(ejemplar) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, 210, 25, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("ASOCIACIÓN CLUB GALLINA ALACANTINA", 14, 12);
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("Ficha Oficial de Registro - Libro Genealógico (ESGA025)", 14, 18);
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`ANILLA: ${ejemplar.anilla}`, 14, 35);
+
+      doc.autoTable({
+        startY: 40,
+        head: [['Concepto', 'Detalle']],
+        body: [
+          ['Nombre del Criador', ejemplar.nombre_criador || 'No indicado'],
+          ['Código REGA', ejemplar.rega || 'No indicado'],
+          ['Estado Pre-Libro', ejemplar.estado_prelibro || 'Pendiente'],
+          ['Variedad de Color', ejemplar.variedad_color || '-'],
+          ['Sexo / Diámetro', `${ejemplar.sexo || '-'} (${ejemplar.diametro_anilla || '-'} mm)`],
+          ['Año de Nacimiento', ejemplar.ano_nacimiento || '-'],
+          ['Peso (Gramos)', ejemplar.peso_gramos ? `${ejemplar.peso_gramos} g` : 'No registrado'],
+          ['Anilla Padre', ejemplar.anilla_padre || '-'],
+          ['Anilla Madre', ejemplar.anilla_madre || '-'],
+          ['Fecha de Registro', ejemplar.creado_el ? new Date(ejemplar.creado_el).toLocaleDateString('es-ES') : '-']
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 4 }
+      });
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Documento expedido por el sistema AlacantinApp - Club Gallina Alacantina", 14, doc.lastAutoTable.finalY + 15);
+
+      doc.save(`Ficha_${ejemplar.anilla}.pdf`);
+    }
+
+    // LÓGICA DE REPORTES GENERALES
     async function generarReporte() {
       const area = document.getElementById('areaImpresion');
       area.innerHTML = "<p class='text-slate-400 text-center'>Generando reporte...</p>";
@@ -738,6 +782,7 @@
           <thead>
             <tr class="bg-slate-900 border-b border-slate-800 text-slate-400">
               <th class="p-2 text-left">Anilla</th>
+              <th class="p-2 text-left">Criador / REGA</th>
               <th class="p-2 text-left">Sexo</th>
               <th class="p-2 text-left">Variedad</th>
               <th class="p-2 text-left">Año</th>
@@ -752,6 +797,7 @@
         html += `
           <tr class="border-b border-slate-800/60">
             <td class="p-2 font-bold">${el.anilla}</td>
+            <td class="p-2 text-[10px]">${el.nombre_criador || '-'} (${el.rega || '-'})</td>
             <td class="p-2">${el.sexo} (${el.diametro_anilla}mm)</td>
             <td class="p-2">${el.variedad_color}</td>
             <td class="p-2">${el.ano_nacimiento || '-'}</td>
