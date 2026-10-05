@@ -22,10 +22,10 @@ let ejemplares = [
     estado: "Apto",
     padre: "E 0000",
     madre: "E 0000",
-    observaciones: "Gallo fundador. Excelente cresta sencilla, orejillas blancas y tarsos blancos limpios.",
+    observaciones: "Ejemplar de alta inicial pre-libro.",
     criador: "José Joaquín Cabrera Font",
     rega: "ES000000000000",
-    socio: "Nº 001"
+    socio: "Nº 000"
   }
 ];
 
@@ -33,7 +33,7 @@ let ejemplares = [
 // FUNCIONES DE INTERFAZ Y FORMULARIOS
 // ==========================================
 
-// Actualizar peso sugerido según el sexo (3,25 kg Macho / 2,4 kg Hembra)
+// Actualizar peso sugerido según el sexo
 function actualizarPesoPorDefecto() {
   const sexo = document.getElementById('sexo').value;
   const inputPeso = document.getElementById('peso');
@@ -109,14 +109,16 @@ function limpiarFormulario() {
   const anilla = document.getElementById('anilla');
   const padre = document.getElementById('padre');
   const madre = document.getElementById('madre');
+  const obs = document.getElementById('observaciones');
 
   if (anilla) anilla.placeholder = "E 0000";
   if (padre) padre.placeholder = "E 0000";
   if (madre) madre.placeholder = "E 0000";
+  if (obs) obs.placeholder = "Detalles morfológicos u observaciones del ejemplar...";
 }
 
 // ==========================================
-// LÓGICA DE NEGOCIO Y DATOS (CENSO E INFORMES)
+// LÓGICA DE NEGOCIO Y DATOS
 // ==========================================
 
 // Guardar / Editar Ejemplar
@@ -134,8 +136,8 @@ function guardarEjemplar(e) {
     madre: document.getElementById('madre').value.trim().toUpperCase() || 'E 0000',
     observaciones: document.getElementById('observaciones').value.trim(),
     criador: document.getElementById('criador_nombre').value.trim() || 'Criador Sin Registrar',
-    rega: document.getElementById('criador_rega').value.trim() || 'Sin REGA',
-    socio: document.getElementById('criador_socio').value.trim() || 'N/A'
+    rega: document.getElementById('criador_rega').value.trim() || 'ES000000000000',
+    socio: document.getElementById('criador_socio').value.trim() || 'Nº 000'
   };
 
   const idx = ejemplares.findIndex(item => item.anilla === nuevo.anilla);
@@ -232,7 +234,7 @@ function filtrarInformes() {
   container.innerHTML = html;
 }
 
-// Función auxiliar para exportar/imprimir Ficha Genealógica en PDF
+// Exportar Ficha Genealógica en PDF
 function exportarFichaPDF(anilla) {
   const ej = ejemplares.find(e => e.anilla === anilla);
   if (!ej) return;
@@ -275,9 +277,7 @@ function exportarFichaPDF(anilla) {
   printWindow.document.close();
 }
 
-// ==========================================
 // INICIALIZACIÓN
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   renderCenso();
 });
