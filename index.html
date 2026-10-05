@@ -96,11 +96,15 @@
           <div>
             <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
             <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-              <option value="Apercada">Apercada</option>
-              <option value="Silvestre">Silvestre</option>
-              <option value="Negra">Negra</option>
-              <option value="Blanca">Blanca</option>
-              <option value="Francisca">Francisca</option>
+              <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
+                <option value="Blanco" class="text-slate-100">Blanco</option>
+                <option value="Negro Moteado" class="text-slate-100">Negro Moteado</option>
+                <option value="Pinto/Exchequer" class="text-slate-100">Pinto / Exchequer</option>
+              </optgroup>
+              <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
+                <option value="Armiñada en negro" class="text-slate-100">Armiñada en negro</option>
+                <option value="Milflores" class="text-slate-100">Milflores</option>
+              </optgroup>
             </select>
           </div>
 
@@ -201,11 +205,15 @@
             <label class="block text-xs text-slate-400 mb-1">Filtrar por Variedad</label>
             <select id="filtro-variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
               <option value="Todas">Todas las variedades</option>
-              <option value="Apercada">Apercada</option>
-              <option value="Silvestre">Silvestre</option>
-              <option value="Negra">Negra</option>
-              <option value="Blanca">Blanca</option>
-              <option value="Francisca">Francisca</option>
+              <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
+                <option value="Blanco" class="text-slate-100">Blanco</option>
+                <option value="Negro Moteado" class="text-slate-100">Negro Moteado</option>
+                <option value="Pinto/Exchequer" class="text-slate-100">Pinto / Exchequer</option>
+              </optgroup>
+              <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
+                <option value="Armiñada en negro" class="text-slate-100">Armiñada en negro</option>
+                <option value="Milflores" class="text-slate-100">Milflores</option>
+              </optgroup>
             </select>
           </div>
           <div class="flex items-end gap-2">
@@ -235,76 +243,4 @@
           <p class="text-xs text-slate-400">Patrón de la Raza Gallina Alacantina (Código ESGA025)</p>
         </div>
         <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
-          Abrir FESACOCUR ↗
-        </a>
-      </div>
-      <div class="bg-slate-800 p-2 rounded-xl border border-slate-700 h-[600px]">
-        <iframe src="https://fesacocur.es" class="w-full h-full rounded-lg" title="Estándar Oficial FESACOCUR"></iframe>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 5: PANEL DE VALIDACIÓN (ADMIN/INSPECTOR) -->
-    <section id="sec-gestion" class="hidden space-y-4">
-      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-        <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Control de Inspecciones</h2>
-        <p class="text-sm text-slate-400 mb-4">Aprobación o rechazo definitivo de ejemplares para la inscripción en el Libro Genealógico Oficial ESGA025.</p>
-        <div id="lista-inspeccion" class="space-y-3">
-          <!-- Cargado por JS -->
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- NAVEGACIÓN INFERIOR MÓVIL (FIXED) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around p-2 z-50 no-print">
-    <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center p-2 text-amber-400 touch-target">
-      <span class="text-lg">📝</span>
-      <span class="text-[10px]">Alta</span>
-    </button>
-    <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center p-2 text-slate-400 touch-target">
-      <span class="text-lg">📋</span>
-      <span class="text-[10px]">Censo</span>
-    </button>
-    <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center p-2 text-slate-400 touch-target">
-      <span class="text-lg">📊</span>
-      <span class="text-[10px]">Informes</span>
-    </button>
-    <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center p-2 text-slate-400 touch-target">
-      <span class="text-lg">📖</span>
-      <span class="text-[10px]">Estándar</span>
-    </button>
-    <button onclick="switchTab('gestion')" id="mob-gestion" class="flex flex-col items-center p-2 text-slate-400 touch-target hidden">
-      <span class="text-lg">🛡️</span>
-      <span class="text-[10px]">Validar</span>
-    </button>
-  </nav>
-
-  <!-- MODAL DE AUTENTICACIÓN / LOGIN -->
-  <div id="modal-auth" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
-    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 max-w-sm w-full space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-lg text-amber-400">Acceso a AlacantinApp</h3>
-        <button onclick="toggleAuthModal()" class="text-slate-400 hover:text-white">✕</button>
-      </div>
-      <form onsubmit="handleAuth(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Correo Electrónico</label>
-          <input type="email" id="auth-email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Contraseña</label>
-          <input type="password" id="auth-password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:border-amber-400 focus:outline-none">
-        </div>
-        <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
-          Iniciar Sesión
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- SCRIPTS DE LA APLICACIÓN -->
-  <script src="app.js"></script>
-  <script src="pdf-engine.js"></script>
-</body>
-</html>
+          Abrir
