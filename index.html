@@ -236,17 +236,25 @@
     </section>
 
     <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
-    <section id="sec-estandar" class="hidden space-y-4">
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-        <div>
-          <h2 class="text-lg font-semibold text-amber-400">Estándar Racial Oficial (FESACOCUR)</h2>
-          <p class="text-xs text-slate-400">Patrón de la Raza Gallina Alacantina (Código ESGA025)</p>
-        </div>
-        <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
-          Abrir FESACOCUR
-        </a>
+   <!-- SECCIÓN: ESTÁNDAR RACIAL -->
+<section id="sec-estandar" class="hidden space-y-6">
+  <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
+    <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
+      <div>
+        <h2 class="text-xl font-bold text-amber-400">Estándar Racial Oficial</h2>
+        <p class="text-xs text-slate-400">Patrón oficial de la Raza Gallina Alacantina (Código ESGA025)</p>
       </div>
-    </section>
+      <a href="Estandar-Alacantina2025.pdf" target="_blank" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold rounded flex items-center gap-1">
+        📄 Descargar PDF
+      </a>
+    </div>
+    
+    <!-- Visor PDF embebido -->
+    <div class="w-full h-[75vh] bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+      <iframe src="Estandar-Alacantina2025.pdf" class="w-full h-full border-0" title="Estándar Racial Gallina Alacantina 2025"></iframe>
+    </div>
+  </div>
+</section>
 
     <!-- SECCIÓN 5: GESTIÓN Y VALIDACIÓN -->
     <section id="sec-gestion" class="hidden space-y-4">
