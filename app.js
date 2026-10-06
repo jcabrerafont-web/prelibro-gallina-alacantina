@@ -95,8 +95,8 @@ function handleAuth(e) {
     btnAuth.onclick = logout;
   }
 
-  // 3. Abrir la pestaña del censo
-  switchTab('censo');
+  // 3. Abrir la pestaña de alta de ejemplar
+  switchTab('registro');
 }
 
 // Cerrar Sesión
