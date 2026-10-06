@@ -267,9 +267,29 @@
       </div>
     </section>
 
-  </main>
-  </div> <!-- FIN DE APP-CONTENT -->
+ </main>
 
+    <!-- NAVEGACIÓN INFERIOR PARA MÓVILES -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 px-2 py-2 flex justify-around items-center z-40 no-print">
+      <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📝</span>
+        <span>Alta</span>
+      </button>
+      <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center gap-1 text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📋</span>
+        <span>Censo</span>
+      </button>
+      <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📊</span>
+        <span>Informes</span>
+      </button>
+      <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📖</span>
+        <span>Estándar</span>
+      </button>
+    </nav>
+
+  </div> <!-- FIN DE APP-CONTENT -->
 <!-- PANTALLA DE BIENVENIDA / LOGIN -->
   <div id="landing-login" class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl text-center space-y-6">
