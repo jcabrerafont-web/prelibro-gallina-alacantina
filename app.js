@@ -12,23 +12,7 @@ if (SUPABASE_URL !== 'https://tu-proyecto.supabase.co') {
 }
 
 // Censo local inicial
-let ejemplares = [
-  {
-    anilla: "E 0001",
-    sexo: "M",
-    variedad: "Blanco",
-    anyo: "2026",
-    peso: "3250",
-    estado: "Apto",
-    padre: "E 0000",
-    madre: "E 0000",
-    observaciones: "Ejemplar de alta inicial pre-libro.",
-    criador: "José Joaquín Cabrera Font",
-    rega: "ES000000000000",
-    socio: "Nº 000"
-  }
-];
-
+let ejemplares = [];
 // ==========================================
 // FUNCIONES DE INTERFAZ Y FORMULARIOS
 // ==========================================
