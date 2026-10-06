@@ -71,26 +71,54 @@ function switchTab(tab) {
   }
 }
 
-// Modal de Login y Autenticación
-function toggleAuthModal() {
-  const modal = document.getElementById('modal-auth');
-  if (modal) modal.classList.toggle('hidden');
-}
-
+// Manejo de Sesión y Acceso
 function handleAuth(e) {
   e.preventDefault();
-  isAuthenticated = true; // Activa la sesión
-  
+  isAuthenticated = true;
+
+  // 1. Ocultar la pantalla de bienvenida y mostrar la aplicación
+  const landing = document.getElementById('landing-login');
+  const appContent = document.getElementById('app-content');
+
+  if (landing) landing.classList.add('hidden');
+  if (appContent) appContent.classList.remove('hidden');
+
+  // 2. Actualizar estado e indicador en la cabecera
   const authInd = document.getElementById('auth-indicator');
   const authState = document.getElementById('auth-state');
   const btnAuth = document.getElementById('btn-auth');
 
   if (authInd) authInd.className = "w-2 h-2 rounded-full bg-green-500";
   if (authState) authState.innerText = "Socio Autenticado";
-  if (btnAuth) btnAuth.innerText = "Salir";
-  
-  toggleAuthModal();
-  switchTab('censo'); // Entra automáticamente al censo tras autenticarse
+  if (btnAuth) {
+    btnAuth.innerText = "Salir";
+    btnAuth.onclick = logout;
+  }
+
+  // 3. Abrir la pestaña del censo
+  switchTab('censo');
+}
+
+// Cerrar Sesión
+function logout() {
+  isAuthenticated = false;
+
+  const landing = document.getElementById('landing-login');
+  const appContent = document.getElementById('app-content');
+
+  if (landing) landing.classList.remove('hidden');
+  if (appContent) appContent.classList.add('hidden');
+
+  const authInd = document.getElementById('auth-indicator');
+  const authState = document.getElementById('auth-state');
+  const btnAuth = document.getElementById('btn-auth');
+
+  if (authInd) authInd.className = "w-2 h-2 rounded-full bg-yellow-500";
+  if (authState) authState.innerText = "Sesión no iniciada";
+  if (btnAuth) {
+    btnAuth.innerText = "Entrar";
+    btnAuth.onclick = () => location.reload();
+  }
 }
 
 // Limpiar campos del formulario
