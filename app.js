@@ -11,6 +11,9 @@ if (SUPABASE_URL !== 'https://tu-proyecto.supabase.co') {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// Estado de sesión
+let isAuthenticated = false;
+
 // Censo local inicial
 let ejemplares = [];
 // ==========================================
@@ -28,8 +31,14 @@ function actualizarPesoPorDefecto() {
   }
 }
 
-// Navegación por pestañas
+// Navegación por pestañas con control de sesión
 function switchTab(tab) {
+  // Si no está autenticado, detiene el cambio de pestaña y abre el modal de login
+  if (!isAuthenticated) {
+    toggleAuthModal();
+    return;
+  }
+
   const tabs = ['registro', 'censo', 'informes', 'estandar', 'gestion'];
   tabs.forEach(t => {
     const sec = document.getElementById(`sec-${t}`);
@@ -70,6 +79,8 @@ function toggleAuthModal() {
 
 function handleAuth(e) {
   e.preventDefault();
+  isAuthenticated = true; // Activa la sesión
+  
   const authInd = document.getElementById('auth-indicator');
   const authState = document.getElementById('auth-state');
   const btnAuth = document.getElementById('btn-auth');
@@ -77,7 +88,9 @@ function handleAuth(e) {
   if (authInd) authInd.className = "w-2 h-2 rounded-full bg-green-500";
   if (authState) authState.innerText = "Socio Autenticado";
   if (btnAuth) btnAuth.innerText = "Salir";
+  
   toggleAuthModal();
+  switchTab('censo'); // Entra automáticamente al censo tras autenticarse
 }
 
 // Limpiar campos del formulario
@@ -264,4 +277,12 @@ function exportarFichaPDF(anilla) {
 // INICIALIZACIÓN
 document.addEventListener('DOMContentLoaded', () => {
   renderCenso();
+  if (!isAuthenticated) {
+    // Oculta todas las pestañas de contenido si no hay sesión
+    const tabs = ['registro', 'censo', 'informes', 'estandar', 'gestion'];
+    tabs.forEach(t => {
+      const sec = document.getElementById(`sec-${t}`);
+      if (sec) sec.classList.add('hidden');
+    });
+  }
 });
