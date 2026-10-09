@@ -1,348 +1,645 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlacantinApp v3 - Libro Genealógico Oficial ESGA025</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-0">
+// ============================================================================
+// ALACANTINAPP V3 - LÓGICA PRINCIPAL Y GESTIÓN DE LIBRO GENEALÓGICO (app.js)
+// Libro Genealógico Oficial ESGA025 (CNZ) - Club Gallina Alacantina
+// ============================================================================
 
-  <!-- APLICACIÓN PRINCIPAL (OCULTA INICIALMENTE) -->
-  <div id="app-content" class="hidden">
+// --- CONFIGURACIÓN SUPABASE ---
+const SUPABASE_URL = 'https://xyzcompany.supabase.co'; // Sustituir por la URL de tu proyecto Supabase
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Sustituir por tu Anon Key de Supabase
 
-    <!-- CABECERA PRINCIPAL -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 no-print">
-      <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-9 h-9 object-contain">
-          <div>
-            <h1 class="text-lg font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent leading-tight">
-              AlacantinApp v3
-            </h1>
-            <p class="text-[10px] text-slate-400">Libro Genealógico ESGA025 (CNZ)</p>
-          </div>
-        </div>
-        
-        <!-- ESTADO DE SESIÓN Y MODO OFFLINE -->
-        <div class="flex items-center gap-2">
-          <div id="offline-badge" class="hidden text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded-full flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Sin Conexión
-          </div>
-          <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
-            <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
-            <span id="auth-state">Sesión no iniciada</span>
-            <button onclick="logout()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
-          </div>
-        </div>
-      </div>
-    </header>
+let supabaseClient = null;
+if (window.supabase) {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
+// --- ESTADO GLOBAL DE LA APLICACIÓN ---
+let state = {
+  animals: [],
+  breeders: [],
+  vaccines: [],
+  losses: [],
+  user: null,
+  filters: {
+    search: '',
+    variety: 'all',
+    sex: 'all',
+    status: 'active'
+  }
+};
 
-      <!-- PESTAÑAS NAVEGACIÓN DESKTOP -->
-      <div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
-        <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
-          📝 Alta / Ficha Ejemplar
+// ============================================================================
+// 1. AUTENTICACIÓN Y CONTROL DE SESIÓN
+// ============================================================================
+
+async function handleAuth(event) {
+  if (event) event.preventDefault(); // OBLIGATORIO: Evita recarga y la '?' en la URL
+
+  const emailInput = document.getElementById('email') || document.querySelector('input[type="email"]');
+  const passwordInput = document.getElementById('password') || document.querySelector('input[type="password"]');
+
+  if (!emailInput || !passwordInput) {
+    alert('No se encontraron los campos del formulario de acceso.');
+    return;
+  }
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
+  if (!email || !password) {
+    alert('Por favor, introduce tu correo electrónico y contraseña.');
+    return;
+  }
+
+  if (!supabaseClient) {
+    alert('Error: El cliente de Supabase no se ha inicializado.');
+    return;
+  }
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
+
+  if (error) {
+    alert('Error de acceso: ' + error.message);
+    console.error('Error Supabase Auth:', error);
+  } else {
+    state.user = data.user;
+    updateAuthUI(true, data.user.email);
+    await loadAllData();
+  }
+}
+
+async function checkSession() {
+  if (!supabaseClient) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    state.user = session.user;
+    updateAuthUI(true, session.user.email);
+    await loadAllData();
+  } else {
+    updateAuthUI(false);
+  }
+}
+
+function updateAuthUI(isAuthenticated, userEmail = '') {
+  const appContent = document.getElementById('app-content');
+  const authState = document.getElementById('auth-state');
+  const authIndicator = document.getElementById('auth-indicator');
+  const btnAuth = document.getElementById('btn-auth');
+
+  if (isAuthenticated) {
+    if (appContent) appContent.classList.remove('hidden');
+    if (authState) authState.textContent = userEmail;
+    if (authIndicator) {
+      authIndicator.className = 'w-2 h-2 rounded-full bg-green-500';
+    }
+    if (btnAuth) {
+      btnAuth.textContent = 'Cerrar Sesión';
+      btnAuth.onclick = logout;
+    }
+  } else {
+    if (authState) authState.textContent = 'Sesión no iniciada';
+    if (authIndicator) {
+      authIndicator.className = 'w-2 h-2 rounded-full bg-yellow-500';
+    }
+    if (btnAuth) {
+      btnAuth.textContent = 'Entrar';
+      btnAuth.onclick = () => window.location.reload();
+    }
+  }
+}
+
+async function logout() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+  state.user = null;
+  window.location.reload();
+}
+
+// ============================================================================
+// 2. CARGA Y SINCRONIZACIÓN DE DATOS (SUPABASE + LOCALSTORAGE)
+// ============================================================================
+
+async function loadAllData() {
+  try {
+    if (navigator.onLine && supabaseClient) {
+      const [resAnimals, resBreeders, resVaccines, resLosses] = await Promise.all([
+        supabaseClient.from('animals').select('*').order('created_at', { ascending: false }),
+        supabaseClient.from('breeders').select('*').order('code', { ascending: true }),
+        supabaseClient.from('vaccines').select('*').order('date', { ascending: false }),
+        supabaseClient.from('losses').select('*').order('date', { ascending: false })
+      ]);
+
+      if (resAnimals.data) state.animals = resAnimals.data;
+      if (resBreeders.data) state.breeders = resBreeders.data;
+      if (resVaccines.data) state.vaccines = resVaccines.data;
+      if (resLosses.data) state.losses = resLosses.data;
+
+      // Actualizar caché offline
+      localStorage.setItem('alacantin_animals', JSON.stringify(state.animals));
+      localStorage.setItem('alacantin_breeders', JSON.stringify(state.breeders));
+      localStorage.setItem('alacantin_vaccines', JSON.stringify(state.vaccines));
+      localStorage.setItem('alacantin_losses', JSON.stringify(state.losses));
+
+      const offlineBadge = document.getElementById('offline-badge');
+      if (offlineBadge) offlineBadge.classList.add('hidden');
+    } else {
+      // Cargar desde caché en modo offline
+      state.animals = JSON.parse(localStorage.getItem('alacantin_animals') || '[]');
+      state.breeders = JSON.parse(localStorage.getItem('alacantin_breeders') || '[]');
+      state.vaccines = JSON.parse(localStorage.getItem('alacantin_vaccines') || '[]');
+      state.losses = JSON.parse(localStorage.getItem('alacantin_losses') || '[]');
+      
+      const offlineBadge = document.getElementById('offline-badge');
+      if (offlineBadge) offlineBadge.classList.remove('hidden');
+    }
+
+    renderAll();
+  } catch (err) {
+    console.error('Error al sincronizar datos:', err);
+  }
+}
+
+// ============================================================================
+// 3. REGISTRO Y GUARDADO DE DATOS (CRUD)
+// ============================================================================
+
+async function saveAnimal(event) {
+  if (event) event.preventDefault();
+
+  const ring = document.getElementById('animal-ring')?.value.trim();
+  const variety = document.getElementById('animal-variety')?.value;
+  const sex = document.getElementById('animal-sex')?.value;
+  const birthDate = document.getElementById('animal-birth')?.value;
+  const sire = document.getElementById('animal-sire')?.value.trim();
+  const dam = document.getElementById('animal-dam')?.value.trim();
+  const breederCode = document.getElementById('animal-breeder')?.value;
+  const notes = document.getElementById('animal-notes')?.value;
+
+  if (!ring) {
+    alert('La anilla oficial es obligatoria.');
+    return;
+  }
+
+  const newAnimal = {
+    ring_number: ring,
+    variety: variety || 'Milflores',
+    sex: sex || 'M',
+    birth_date: birthDate || null,
+    sire_ring: sire || null,
+    dam_ring: dam || null,
+    breeder_code: breederCode || null,
+    notes: notes || '',
+    status: 'active'
+  };
+
+  if (navigator.onLine && supabaseClient) {
+    const { error } = await supabaseClient.from('animals').upsert([newAnimal]);
+    if (error) {
+      alert('Error al guardar en Supabase: ' + error.message);
+      return;
+    }
+  }
+
+  const index = state.animals.findIndex(a => a.ring_number === ring);
+  if (index >= 0) {
+    state.animals[index] = newAnimal;
+  } else {
+    state.animals.unshift(newAnimal);
+  }
+
+  localStorage.setItem('alacantin_animals', JSON.stringify(state.animals));
+  closeModal('modal-animal');
+  renderAll();
+}
+
+async function saveBreeder(event) {
+  if (event) event.preventDefault();
+
+  const code = document.getElementById('breeder-code')?.value.trim();
+  const name = document.getElementById('breeder-name')?.value.trim();
+  const location = document.getElementById('breeder-location')?.value.trim();
+  const phone = document.getElementById('breeder-phone')?.value.trim();
+
+  if (!code || !name) {
+    alert('El código de criador y el nombre son obligatorios.');
+    return;
+  }
+
+  const newBreeder = { code, full_name: name, location, phone };
+
+  if (navigator.onLine && supabaseClient) {
+    const { error } = await supabaseClient.from('breeders').upsert([newBreeder]);
+    if (error) {
+      alert('Error al guardar criador: ' + error.message);
+      return;
+    }
+  }
+
+  const index = state.breeders.findIndex(b => b.code === code);
+  if (index >= 0) {
+    state.breeders[index] = newBreeder;
+  } else {
+    state.breeders.push(newBreeder);
+  }
+
+  localStorage.setItem('alacantin_breeders', JSON.stringify(state.breeders));
+  closeModal('modal-breeder');
+  renderAll();
+}
+
+async function saveVaccine(event) {
+  if (event) event.preventDefault();
+
+  const ring = document.getElementById('vaccine-ring')?.value.trim();
+  const name = document.getElementById('vaccine-name')?.value.trim();
+  const date = document.getElementById('vaccine-date')?.value;
+  const batch = document.getElementById('vaccine-batch')?.value.trim();
+
+  if (!ring || !name || !date) {
+    alert('Anilla, vacuna y fecha son obligatorias.');
+    return;
+  }
+
+  const newVaccine = { ring_number: ring, vaccine_name: name, date, batch_number: batch };
+
+  if (navigator.onLine && supabaseClient) {
+    await supabaseClient.from('vaccines').insert([newVaccine]);
+  }
+
+  state.vaccines.unshift(newVaccine);
+  localStorage.setItem('alacantin_vaccines', JSON.stringify(state.vaccines));
+  closeModal('modal-vaccine');
+  renderAll();
+}
+
+async function markLoss(ringNumber) {
+  const reason = prompt(`Indique el motivo de la baja para el ejemplar ${ringNumber}:`);
+  if (!reason) return;
+
+  const lossRecord = {
+    ring_number: ringNumber,
+    date: new Date().toISOString().split('T')[0],
+    reason: reason
+  };
+
+  if (navigator.onLine && supabaseClient) {
+    await supabaseClient.from('losses').insert([lossRecord]);
+    await supabaseClient.from('animals').update({ status: 'loss' }).eq('ring_number', ringNumber);
+  }
+
+  const animal = state.animals.find(a => a.ring_number === ringNumber);
+  if (animal) animal.status = 'loss';
+
+  state.losses.push(lossRecord);
+  localStorage.setItem('alacantin_animals', JSON.stringify(state.animals));
+  localStorage.setItem('alacantin_losses', JSON.stringify(state.losses));
+  renderAll();
+}
+
+// ============================================================================
+// 4. CÁLCULOS GENEALÓGICOS Y CONSANGUINIDAD (WRIGHT COMPLETO)
+// ============================================================================
+
+function getAncestors(ringNumber, depth = 3) {
+  if (!ringNumber || depth === 0) return null;
+  const animal = state.animals.find(a => a.ring_number === ringNumber);
+  if (!animal) return { ring_number: ringNumber, sire: null, dam: null };
+
+  return {
+    ...animal,
+    sire: getAncestors(animal.sire_ring, depth - 1),
+    dam: getAncestors(animal.dam_ring, depth - 1)
+  };
+}
+
+function calculateWrightInbreeding(sireRing, damRing) {
+  if (!sireRing || !damRing) return 0;
+
+  const getAncestorPaths = (ring, currentPath = [], allPaths = []) => {
+    const animal = state.animals.find(a => a.ring_number === ring);
+    if (!animal) return allPaths;
+
+    const newPath = [...currentPath, ring];
+    allPaths.push(newPath);
+
+    if (animal.sire_ring) getAncestorPaths(animal.sire_ring, newPath, allPaths);
+    if (animal.dam_ring) getAncestorPaths(animal.dam_ring, newPath, allPaths);
+
+    return allPaths;
+  };
+
+  const sirePaths = getAncestorPaths(sireRing);
+  const damPaths = getAncestorPaths(damRing);
+
+  let totalFx = 0;
+
+  sirePaths.forEach(sPath => {
+    const commonAncestor = sPath[sPath.length - 1];
+    damPaths.forEach(dPath => {
+      if (dPath[dPath.length - 1] === commonAncestor) {
+        const n1 = sPath.length - 1;
+        const n2 = dPath.length - 1;
+        totalFx += Math.pow(0.5, n1 + n2 + 1);
+      }
+    });
+  });
+
+  return Math.min(totalFx * 100, 100);
+}
+
+// ============================================================================
+// 5. RENDERIZADO DE TABLAS, VISTAS Y ESTADÍSTICAS
+// ============================================================================
+
+function renderAll() {
+  renderAnimalsTable();
+  renderBreedersTable();
+  renderVaccinesTable();
+  renderLossesTable();
+  renderStats();
+  populateDropdowns();
+}
+
+function renderAnimalsTable() {
+  const tbody = document.getElementById('animals-tbody');
+  if (!tbody) return;
+
+  const filtered = state.animals.filter(a => {
+    const matchesSearch = !state.filters.search || 
+      a.ring_number.toLowerCase().includes(state.filters.search.toLowerCase()) ||
+      (a.notes && a.notes.toLowerCase().includes(state.filters.search.toLowerCase()));
+    
+    const matchesVariety = state.filters.variety === 'all' || a.variety === state.filters.variety;
+    const matchesSex = state.filters.sex === 'all' || a.sex === state.filters.sex;
+    const matchesStatus = state.filters.status === 'all' || a.status === state.filters.status;
+
+    return matchesSearch && matchesVariety && matchesSex && matchesStatus;
+  });
+
+  tbody.innerHTML = filtered.map(a => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50 transition">
+      <td class="p-3 font-mono font-bold text-amber-400">${a.ring_number}</td>
+      <td class="p-3">${a.variety || 'Milflores'}</td>
+      <td class="p-3">
+        <span class="px-2 py-0.5 rounded text-xs ${a.sex === 'M' ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'}">
+          ${a.sex === 'M' ? '♂ Macho' : '♀ Hembra'}
+        </span>
+      </td>
+      <td class="p-3 text-sm text-slate-300">${a.birth_date || '-'}</td>
+      <td class="p-3 font-mono text-xs text-slate-400">${a.sire_ring || '-'}</td>
+      <td class="p-3 font-mono text-xs text-slate-400">${a.dam_ring || '-'}</td>
+      <td class="p-3">
+        <span class="px-2 py-0.5 rounded text-xs ${a.status === 'loss' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}">
+          ${a.status === 'loss' ? 'Baja' : 'Activo'}
+        </span>
+      </td>
+      <td class="p-3 flex gap-2">
+        <button onclick="generatePedigreePDF('${a.ring_number}')" class="px-2 py-1 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded text-xs border border-amber-500/30">
+          PDF
         </button>
-        <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📋 Censo Genealógico
-        </button>
-        <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📊 Informes & Exportación CNZ
-        </button>
-        <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📖 Estándar Racial
-        </button>
-        <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
-          🛡️ Inspección Zootécnica
-        </button>
-      </div>
+        ${a.status !== 'loss' ? `
+          <button onclick="markLoss('${a.ring_number}')" class="px-2 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs border border-red-500/30">
+            Baja
+          </button>
+        ` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
 
-      <!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
-      <section id="sec-registro" class="space-y-6">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-          
-          <!-- BLOQUE 1: DATOS DEL CRIADOR Y REGA GEOLOCALIZADO -->
-          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">👤 Explotación y Criador Titular</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
-              <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
-              <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
-              <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Municipio *</label>
-              <input type="text" id="criador_municipio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Ej. Benissa / Alacant">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Provincia *</label>
-              <input type="text" id="criador_provincia" value="Alicante/Alacant" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Coordenadas GPS (CNZ Distr. Territorial)</label>
-              <div class="flex gap-2">
-                <input type="text" id="criador_gps" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 text-xs focus:border-amber-400 focus:outline-none" placeholder="Lat, Lon">
-                <button type="button" onclick="obtenerUbicacionGPS()" class="px-3 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 text-xs">📍</button>
-              </div>
-            </div>
-          </div>
+function renderBreedersTable() {
+  const tbody = document.getElementById('breeders-tbody');
+  if (!tbody) return;
 
-          <!-- BLOQUE 2: FICHA INDIVIDUAL DEL EJEMPLAR -->
-          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">🐓 Ficha Individual del Ave (Libro Genealógico)</h2>
-          <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Código de Anilla Inamovible *</label>
-              <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
-              <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="M">Macho (Gallo ♂)</option>
-                <option value="H">Hembra (Gallina ♀)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
-              <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <optgroup label="Reconocidas FESACOCUR / Estables" class="bg-slate-900 font-semibold text-amber-400">
-                  <option value="Blanca">Blanco</option>
-                  <option value="Negra moteada">Negra moteada de blanco</option>
-                  <option value="Pinta">Pinta en negro (Exchequer)</option>
-                </optgroup>
-                <optgroup label="En Proceso de Selección (Art. 3.3 CNZ)" class="bg-slate-900 font-semibold text-amber-400">
-                  <option value="Armiñada">Armiñada</option>
-                  <option value="Milflores">Milflores</option>
-                </optgroup>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Fecha de Nacimiento Exacta *</label>
-              <input type="date" id="fecha_nacimiento" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
-              <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Sección del Libro Genealógico *</label>
-              <select id="seccion_libro" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="Registro Nacimientos">Registro de Nacimientos (Pollitos/Jóvenes)</option>
-                <option value="Fundadores">Sección de Fundadores / Asemejados</option>
-                <option value="Registro Definitivo">Registro Definitivo de Reproductores (Apto)</option>
-                <option value="Baja/Cedido">Baja / Sacrificio / Cedido</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Anilla Padre (Sire / Pedigrí)</label>
-              <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Anilla Madre (Dam / Pedigrí)</label>
-              <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Material en Banco de Germoplasma</label>
-              <select id="banco_germoplasma" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="No">No depositado</option>
-                <option value="Semen">Semen congelado en Banco Oficial</option>
-                <option value="Ovocitos/ADN">Muestra biológica / ADN almacenado</option>
-              </select>
-            </div>
+  tbody.innerHTML = state.breeders.map(b => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+      <td class="p-3 font-bold text-amber-400 font-mono">${b.code}</td>
+      <td class="p-3 font-medium">${b.full_name}</td>
+      <td class="p-3 text-slate-400">${b.location || '-'}</td>
+      <td class="p-3 text-slate-400">${b.phone || '-'}</td>
+    </tr>
+  `).join('');
+}
 
-            <!-- BLOQUE 3: FOTOGRAFÍAS OBLIGATORIAS (CNZ ART. 3.1.c) -->
-            <div class="md:col-span-3 bg-slate-900/60 p-4 rounded-lg border border-slate-700/80 my-2">
-              <h3 class="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">📸 Documentación Fotográfica Obligatoria (CNZ Art. 3.1.c)</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Vista Lateral Completa *</label>
-                  <input type="file" id="foto_lateral" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Cabeza / Cresta / Orejilla *</label>
-                  <input type="file" id="foto_cabeza" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Patas / Tarsos *</label>
-                  <input type="file" id="foto_tarsos" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-              </div>
-            </div>
+function renderVaccinesTable() {
+  const tbody = document.getElementById('vaccines-tbody');
+  if (!tbody) return;
 
-            <div class="md:col-span-3">
-              <label class="block text-xs text-slate-400 mb-1">Observaciones Morfológicas / Calificación</label>
-              <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Rasgos particulares, valoración morfológica..."></textarea>
-            </div>
+  tbody.innerHTML = state.vaccines.map(v => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+      <td class="p-3 font-mono font-bold text-amber-400">${v.ring_number}</td>
+      <td class="p-3 text-slate-200">${v.vaccine_name}</td>
+      <td class="p-3 text-slate-400">${v.date}</td>
+      <td class="p-3 font-mono text-xs text-slate-500">${v.batch_number || '-'}</td>
+    </tr>
+  `).join('');
+}
 
-            <div class="md:col-span-3 flex justify-end gap-3 pt-2">
-              <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">Limpiar</button>
-              <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">Guardar en Libro Genealógico</button>
-            </div>
-          </form>
-        </div>
-      </section>
+function renderLossesTable() {
+  const tbody = document.getElementById('losses-tbody');
+  if (!tbody) return;
 
-      <!-- SECCIÓN 2: TABLA DE CENSO GENEALÓGICO -->
-      <section id="sec-censo" class="hidden space-y-4">
-        <div class="flex justify-between items-center flex-wrap gap-4">
-          <h2 class="text-xl font-bold text-slate-100">Censo del Libro Genealógico ESGA025</h2>
-          <div class="flex gap-2 flex-wrap">
-            <button onclick="exportarMatrizPedigriCSV()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-slate-100 rounded-lg border border-emerald-600 flex items-center gap-2 text-xs font-semibold touch-target">
-              🧬 Exportar Matriz Pedigrí CSV
-            </button>
-            <button onclick="window.print()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-xs touch-target">
-              📄 Imprimir Censo
-            </button>
-          </div>
-        </div>
+  tbody.innerHTML = state.losses.map(l => `
+    <tr class="border-b border-slate-800 hover:bg-slate-800/50">
+      <td class="p-3 font-mono font-bold text-red-400">${l.ring_number}</td>
+      <td class="p-3 text-slate-300">${l.date}</td>
+      <td class="p-3 text-slate-400">${l.reason}</td>
+    </tr>
+  `).join('');
+}
 
-        <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
-          <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
-              <tr>
-                <th class="p-4">Anilla</th>
-                <th class="p-4">Sexo</th>
-                <th class="p-4">Variedad</th>
-                <th class="p-4">Tramo Edad</th>
-                <th class="p-4">Sección Libro</th>
-                <th class="p-4">Criador / REGA</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
-              <!-- Cargado dinámicamente por JS -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+function renderStats() {
+  const activeAnimals = state.animals.filter(a => a.status !== 'loss');
+  
+  const elTotal = document.getElementById('stat-total-animals');
+  const elMales = document.getElementById('stat-males');
+  const elFemales = document.getElementById('stat-females');
+  const elBreeders = document.getElementById('stat-total-breeders');
 
-      <!-- SECCIÓN 3: INFORMES & EXPORTACIÓN CNZ -->
-      <section id="sec-informes" class="hidden space-y-6">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
-          <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales para el Ministerio (CNZ)</h2>
-          <p class="text-sm text-slate-300 mb-4">Estructuración de censos por tramos de edad y desgloses de variabilidad genómica requeridos por la normativa zootécnica.</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Filtrar por Sección del Libro</label>
-              <select id="filtro-seccion" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-                <option value="Todas">Todas las secciones</option>
-                <option value="Registro Definitivo">Registro Definitivo de Reproductores</option>
-                <option value="Registro Nacimientos">Registro de Nacimientos</option>
-                <option value="Fundadores">Fundadores / Asemejados</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Filtrar por Tramo de Edad Exacto</label>
-              <select id="filtro-tramo-edad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-                <option value="Todos">Todos los tramos</option>
-                <option value="Pollito">Pollitos (&lt; 6 meses)</option>
-                <option value="Joven">Jóvenes (6 - 12 meses)</option>
-                <option value="Adulto Reproductor">Adultos Reproductores (&gt; 1 año)</option>
-              </select>
-            </div>
-            <div class="flex items-end gap-2">
-              <button onclick="filtrarInformesCNZ()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
-                Generar Informe Oficial
-              </button>
-              <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">🖨</button>
-            </div>
-          </div>
-        </div>
-        <div id="resultado-informe" class="space-y-4">
-          <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
-            Haz clic en "Generar Informe Oficial" para construir el desglose técnico.
-          </div>
-        </div>
-      </section>
+  if (elTotal) elTotal.textContent = activeAnimals.length;
+  if (elMales) elMales.textContent = activeAnimals.filter(a => a.sex === 'M').length;
+  if (elFemales) elFemales.textContent = activeAnimals.filter(a => a.sex === 'F').length;
+  if (elBreeders) elBreeders.textContent = state.breeders.length;
+}
 
-      <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
-      <section id="sec-estandar" class="hidden space-y-4">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
-          <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
-            <div>
-              <h2 class="text-xl font-bold text-amber-400">Estándar Racial Oficial</h2>
-              <p class="text-xs text-slate-400">Patrón oficial de la Raza Gallina Alacantina (Código ESGA025)</p>
-            </div>
-            <a href="Estandar-Alacantina2025.pdf" target="_blank" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold rounded flex items-center gap-1">
-              📄 Descargar PDF
-            </a>
-          </div>
-          <div class="w-full h-[75vh] bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
-            <iframe src="Estandar-Alacantina2025.pdf" class="w-full h-full border-0" title="Estándar Racial Gallina Alacantina 2025"></iframe>
-          </div>
-        </div>
-      </section>
+function populateDropdowns() {
+  const sireSelect = document.getElementById('animal-sire');
+  const damSelect = document.getElementById('animal-dam');
+  const breederSelect = document.getElementById('animal-breeder');
 
-      <!-- SECCIÓN 5: GESTIÓN E INSPECCIÓN ZOOTÉCNICA -->
-      <section id="sec-gestion" class="hidden space-y-4">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Inspección Zootécnica In Situ</h2>
-          <p class="text-sm text-slate-300">Reservado para Inspectores del Libro Genealógico. Emisión de actas oficiales de calificación morfológica.</p>
-        </div>
-      </section>
+  const males = state.animals.filter(a => a.sex === 'M' && a.status !== 'loss');
+  const females = state.animals.filter(a => a.sex === 'F' && a.status !== 'loss');
 
-    </main>
+  if (sireSelect) {
+    sireSelect.innerHTML = '<option value="">Sin Registro (Padre)</option>' + 
+      males.map(m => `<option value="${m.ring_number}">${m.ring_number} (${m.variety || 'Milflores'})</option>`).join('');
+  }
 
-    <!-- NAVEGACIÓN INFERIOR PARA MÓVILES -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 px-2 py-2 flex justify-around items-center z-40 no-print">
-      <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center gap-1 text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📝</span>
-        <span>Alta</span>
-      </button>
-      <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📋</span>
-        <span>Censo</span>
-      </button>
-      <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📊</span>
-        <span>Informes</span>
-      </button>
-      <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📖</span>
-        <span>Estándar</span>
-      </button>
-    </nav>
+  if (damSelect) {
+    damSelect.innerHTML = '<option value="">Sin Registro (Madre)</option>' + 
+      females.map(f => `<option value="${f.ring_number}">${f.ring_number} (${f.variety || 'Milflores'})</option>`).join('');
+  }
 
-  </div> <!-- FIN DE APP-CONTENT -->
+  if (breederSelect) {
+    breederSelect.innerHTML = '<option value="">Seleccionar Criador</option>' + 
+      state.breeders.map(b => `<option value="${b.code}">${b.code} - ${b.full_name}</option>`).join('');
+  }
+}
 
-  <!-- PANTALLA DE BIENVENIDA / LOGIN -->
-  <div id="landing-login" class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl text-center space-y-6">
-      <div class="space-y-2">
-        <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-32 h-32 mx-auto object-contain mb-2">
-        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-          AlacantinApp v3
-        </h1>
-        <p class="text-xs text-slate-400 font-medium tracking-wide">Gestor Oficial Pre-Libro ESGA025</p>
-      </div>
+// ============================================================================
+// 6. GENERACIÓN DE CERTIFICADOS OFICIALES Y PEDIGRÍ EN PDF
+// ============================================================================
 
-      <form onsubmit="handleAuth(event)" class="space-y-4 text-left pt-2">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Correo Electrónico</label>
-          <input type="email" id="login-email" required placeholder="socio@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold shadow-lg transition-all active:scale-95">
-          Iniciar Sesión
-        </button>
-      </form>
-    </div>
-  </div>
+function generatePedigreePDF(ringNumber) {
+  const animal = state.animals.find(a => a.ring_number === ringNumber);
+  if (!animal) {
+    alert('Ejemplar no encontrado.');
+    return;
+  }
 
-  <script src="app.js"></script>
-</body>
-</html>
+  const tree = getAncestors(ringNumber, 3);
+  const inbreeding = calculateWrightInbreeding(animal.sire_ring, animal.dam_ring);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Encabezado Oficial
+  doc.setFillColor(30, 41, 59); // Slate-800
+  doc.rect(0, 0, 210, 35, 'F');
+
+  doc.setFontSize(16);
+  doc.setTextColor(245, 158, 11); // Amber-500
+  doc.text('CLUB GALLINA ALACANTINA', 14, 18);
+
+  doc.setFontSize(10);
+  doc.setTextColor(203, 213, 225);
+  doc.text('Libro Genealógico Oficial ESGA025 - Certificado de Pedigrí', 14, 26);
+
+  // Ficha Técnica del Ejemplar
+  doc.autoTable({
+    startY: 42,
+    head: [['Dato Oficial', 'Detalle del Ejemplar']],
+    body: [
+      ['Anilla Oficial', animal.ring_number],
+      ['Variedad / Capa', animal.variety || 'Milflores'],
+      ['Sexo', animal.sex === 'M' ? 'Macho (1.0)' : 'Hembra (0.1)'],
+      ['Fecha Nacimiento', animal.birth_date || 'No registrada'],
+      ['Coef. Consanguinidad (Wright)', `${inbreeding.toFixed(2)}%`],
+      ['Criador / Creador', animal.breeder_code || 'ESGA025']
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: [217, 119, 6] }
+  });
+
+  // Árbol de 3 Generaciones
+  doc.setFontSize(12);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Genealogía de 3 Generaciones', 14, doc.lastAutoTable.finalY + 12);
+
+  doc.autoTable({
+    startY: doc.lastAutoTable.finalY + 16,
+    head: [['Padres (Gen 1)', 'Abuelos (Gen 2)', 'Bisabuelos (Gen 3)']],
+    body: [
+      [
+        `Padre:\n${tree.sire ? tree.sire.ring_number : 'Desconocido'}`,
+        `Abuelo P.: ${tree.sire?.sire ? tree.sire.sire.ring_number : '-'}\nAbuela P.: ${tree.sire?.dam ? tree.sire.dam.ring_number : '-'}`,
+        `B. P.: ${tree.sire?.sire?.sire ? tree.sire.sire.sire.ring_number : '-'}`
+      ],
+      [
+        `Madre:\n${tree.dam ? tree.dam.ring_number : 'Desconocida'}`,
+        `Abuelo M.: ${tree.dam?.sire ? tree.dam.sire.ring_number : '-'}\nAbuela M.: ${tree.dam?.dam ? tree.dam.dam.ring_number : '-'}`,
+        `B. M.: ${tree.dam?.dam?.dam ? tree.dam.dam.dam.ring_number : '-'}`
+      ]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [51, 65, 85] }
+  });
+
+  // Pie de Página
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Documento generado automáticamente por AlacantinApp v3 - ${new Date().toLocaleDateString()}`, 14, 285);
+
+  doc.save(`Pedigri_ESGA025_${animal.ring_number}.pdf`);
+}
+
+// ============================================================================
+// 7. CONTROLADORES DE MODALES, BÚSQUEDAS Y EXPORTACIÓN DE DATOS
+// ============================================================================
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.add('hidden');
+}
+
+function setupFilters() {
+  const searchInput = document.getElementById('search-input');
+  const varietySelect = document.getElementById('filter-variety');
+  const sexSelect = document.getElementById('filter-sex');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      state.filters.search = e.target.value;
+      renderAnimalsTable();
+    });
+  }
+
+  if (varietySelect) {
+    varietySelect.addEventListener('change', (e) => {
+      state.filters.variety = e.target.value;
+      renderAnimalsTable();
+    });
+  }
+
+  if (sexSelect) {
+    sexSelect.addEventListener('change', (e) => {
+      state.filters.sex = e.target.value;
+      renderAnimalsTable();
+    });
+  }
+}
+
+function exportJSON() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `Backup_AlacantinApp_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+// ============================================================================
+// 8. INICIALIZACIÓN GLOBAL
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('AlacantinApp v3 - Sistema Pre-Libro ESGA025 cargado completametne.');
+
+  // Conectar formulario de inicio de sesión
+  const loginForm = document.querySelector('form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleAuth);
+  }
+
+  // Conectar formularios secundarios
+  const animalForm = document.getElementById('form-animal');
+  if (animalForm) animalForm.addEventListener('submit', saveAnimal);
+
+  const breederForm = document.getElementById('form-breeder');
+  if (breederForm) breederForm.addEventListener('submit', saveBreeder);
+
+  const vaccineForm = document.getElementById('form-vaccine');
+  if (vaccineForm) vaccineForm.addEventListener('submit', saveVaccine);
+
+  setupFilters();
+  checkSession();
+});
