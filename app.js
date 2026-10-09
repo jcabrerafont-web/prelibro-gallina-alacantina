@@ -1,316 +1,348 @@
-// ==========================================
-// CONFIGURACIÓN Y ESTADO DE LA APLICACIÓN
-// ==========================================
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlacantinApp v3 - Libro Genealógico Oficial ESGA025</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-0">
 
-// Configuración de Supabase
-const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-const SUPABASE_ANON_KEY = 'tu-anon-key';
-let supabaseClient = null;
+  <!-- APLICACIÓN PRINCIPAL (OCULTA INICIALMENTE) -->
+  <div id="app-content" class="hidden">
 
-if (SUPABASE_URL !== 'https://tu-proyecto.supabase.co') {
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-// Estado de sesión
-let isAuthenticated = false;
-
-// Censo local inicial
-let ejemplares = [];
-// ==========================================
-// FUNCIONES DE INTERFAZ Y FORMULARIOS
-// ==========================================
-
-// Actualizar peso sugerido según el sexo
-function actualizarPesoPorDefecto() {
-  const sexo = document.getElementById('sexo').value;
-  const inputPeso = document.getElementById('peso');
-  if (sexo === 'M') {
-    inputPeso.value = 3250;
-  } else if (sexo === 'H') {
-    inputPeso.value = 2400;
-  }
-}
-
-// Navegación por pestañas con control de sesión
-function switchTab(tab) {
-  // Si no está autenticado, detiene el cambio de pestaña y abre el modal de login
-  if (!isAuthenticated) {
-    toggleAuthModal();
-    return;
-  }
-
-  const tabs = ['registro', 'censo', 'informes', 'estandar', 'gestion'];
-  tabs.forEach(t => {
-    const sec = document.getElementById(`sec-${t}`);
-    const tabBtn = document.getElementById(`tab-${t}`);
-    const mobBtn = document.getElementById(`mob-${t}`);
-
-    if (sec) sec.classList.add('hidden');
-    if (tabBtn) {
-      tabBtn.classList.remove('text-amber-400', 'border-amber-400');
-      tabBtn.classList.add('text-slate-400', 'border-transparent');
-    }
-    if (mobBtn) {
-      mobBtn.classList.remove('text-amber-400');
-      mobBtn.classList.add('text-slate-400');
-    }
-  });
-
-  const activeSec = document.getElementById(`sec-${tab}`);
-  const activeTabBtn = document.getElementById(`tab-${tab}`);
-  const activeMobBtn = document.getElementById(`mob-${tab}`);
-
-  if (activeSec) activeSec.classList.remove('hidden');
-  if (activeTabBtn) {
-    activeTabBtn.classList.add('text-amber-400', 'border-amber-400');
-    activeTabBtn.classList.remove('text-slate-400', 'border-transparent');
-  }
-  if (activeMobBtn) {
-    activeMobBtn.classList.add('text-amber-400');
-    activeMobBtn.classList.remove('text-slate-400');
-  }
-}
-
-// Manejo de Sesión y Acceso
-function handleAuth(e) {
-  e.preventDefault();
-  isAuthenticated = true;
-
-  // 1. Ocultar la pantalla de bienvenida y mostrar la aplicación
-  const landing = document.getElementById('landing-login');
-  const appContent = document.getElementById('app-content');
-
-  if (landing) landing.classList.add('hidden');
-  if (appContent) appContent.classList.remove('hidden');
-
-  // 2. Actualizar estado e indicador en la cabecera
-  const authInd = document.getElementById('auth-indicator');
-  const authState = document.getElementById('auth-state');
-  const btnAuth = document.getElementById('btn-auth');
-
-  if (authInd) authInd.className = "w-2 h-2 rounded-full bg-green-500";
-  if (authState) authState.innerText = "Socio Autenticado";
-  if (btnAuth) {
-    btnAuth.innerText = "Salir";
-    btnAuth.onclick = logout;
-  }
-
-  // 3. Abrir la pestaña de alta de ejemplar
-  switchTab('registro');
-}
-
-// Cerrar Sesión
-function logout() {
-  isAuthenticated = false;
-
-  const landing = document.getElementById('landing-login');
-  const appContent = document.getElementById('app-content');
-
-  if (landing) landing.classList.remove('hidden');
-  if (appContent) appContent.classList.add('hidden');
-
-  const authInd = document.getElementById('auth-indicator');
-  const authState = document.getElementById('auth-state');
-  const btnAuth = document.getElementById('btn-auth');
-
-  if (authInd) authInd.className = "w-2 h-2 rounded-full bg-yellow-500";
-  if (authState) authState.innerText = "Sesión no iniciada";
-  if (btnAuth) {
-    btnAuth.innerText = "Entrar";
-    btnAuth.onclick = () => location.reload();
-  }
-}
-
-// Limpiar campos del formulario
-function limpiarFormulario() {
-  const form = document.getElementById('form-ejemplar');
-  if (form) form.reset();
-  
-  const sexo = document.getElementById('sexo');
-  if (sexo) sexo.value = 'M';
-  
-  actualizarPesoPorDefecto();
-  
-  const anilla = document.getElementById('anilla');
-  const padre = document.getElementById('padre');
-  const madre = document.getElementById('madre');
-  const obs = document.getElementById('observaciones');
-
-  if (anilla) anilla.placeholder = "E 0000";
-  if (padre) padre.placeholder = "E 0000";
-  if (madre) madre.placeholder = "E 0000";
-  if (obs) obs.placeholder = "Detalles morfológicos u observaciones del ejemplar...";
-}
-
-// ==========================================
-// LÓGICA DE NEGOCIO Y DATOS
-// ==========================================
-
-// Guardar / Editar Ejemplar
-function guardarEjemplar(e) {
-  e.preventDefault();
-  
-  const nuevo = {
-    anilla: document.getElementById('anilla').value.trim().toUpperCase(),
-    sexo: document.getElementById('sexo').value,
-    variedad: document.getElementById('variedad').value,
-    anyo: document.getElementById('anyo').value,
-    peso: document.getElementById('peso').value,
-    estado: document.getElementById('estado').value,
-    padre: document.getElementById('padre').value.trim().toUpperCase() || 'E 0000',
-    madre: document.getElementById('madre').value.trim().toUpperCase() || 'E 0000',
-    observaciones: document.getElementById('observaciones').value.trim(),
-    criador: document.getElementById('criador_nombre').value.trim() || 'Criador Sin Registrar',
-    rega: document.getElementById('criador_rega').value.trim() || 'ES000000000000',
-    socio: document.getElementById('criador_socio').value.trim() || 'Nº 000'
-  };
-
-  const idx = ejemplares.findIndex(item => item.anilla === nuevo.anilla);
-  if (idx >= 0) {
-    ejemplares[idx] = nuevo;
-  } else {
-    ejemplares.push(nuevo);
-  }
-
-  renderCenso();
-  limpiarFormulario();
-  switchTab('censo');
-}
-
-// Renderizar Tabla de Censo
-function renderCenso() {
-  const tbody = document.getElementById('tabla-ejemplares');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-
-  if (ejemplares.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500">No hay ejemplares registrados en el censo.</td></tr>`;
-    return;
-  }
-
-  ejemplares.forEach(item => {
-    const tr = document.createElement('tr');
-    tr.className = 'border-b border-slate-700 hover:bg-slate-800/50';
-    
-    let badge = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-    if (item.estado === 'Apto') badge = 'bg-green-500/10 text-green-500 border-green-500/20';
-    if (item.estado === 'No Apto') badge = 'bg-red-500/10 text-red-500 border-red-500/20';
-
-    tr.innerHTML = `
-      <td class="p-4 font-bold text-amber-400">${item.anilla}</td>
-      <td class="p-4">${item.sexo === 'M' ? 'Gallo ♂' : 'Gallina ♀'}</td>
-      <td class="p-4">${item.variedad}</td>
-      <td class="p-4">${item.anyo}</td>
-      <td class="p-4">${item.peso} g</td>
-      <td class="p-4">
-        <span class="px-2.5 py-1 text-xs rounded-full border ${badge}">
-          ${item.estado}
-        </span>
-      </td>
-      <td class="p-4 text-right space-x-2">
-        <button onclick="exportarFichaPDF('${item.anilla}')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs rounded text-amber-400 border border-slate-600 touch-target">
-          📄 PDF
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-// Generar Informes Filtrados en pantalla
-function filtrarInformes() {
-  const est = document.getElementById('filtro-estado').value;
-  const varPluma = document.getElementById('filtro-variedad').value;
-
-  const filtrados = ejemplares.filter(e => {
-    const matchEst = est === 'Todos' || e.estado === est;
-    const matchVar = varPluma === 'Todas' || e.variedad === varPluma;
-    return matchEst && matchVar;
-  });
-
-  const container = document.getElementById('resultado-informe');
-  if (!container) return;
-
-  if (filtrados.length === 0) {
-    container.innerHTML = `<div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm">No se encontraron ejemplares con los filtros seleccionados.</div>`;
-    return;
-  }
-
-  let html = `<div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4 print-card">
-    <div class="border-b border-slate-700 pb-3">
-      <h3 class="font-bold text-amber-400 text-lg">Informe de Revisión Pre-Libro ESGA025</h3>
-      <p class="text-xs text-slate-400">Filtros: Estado [${est}] | Variedad [${varPluma}] - Total: ${filtrados.length} ejemplares</p>
-    </div>
-    <div class="space-y-3">`;
-
-  filtrados.forEach(f => {
-    html += `
-      <div class="p-3 bg-slate-900 rounded-lg border border-slate-700 text-xs flex justify-between items-center">
-        <div>
-          <span class="font-bold text-amber-400 text-sm">${f.anilla}</span> - ${f.sexo === 'M' ? 'Macho ♂' : 'Hembra ♀'} | ${f.variedad} | ${f.anyo} | ${f.peso} g
-          <div class="text-slate-400 mt-1">Criador: ${f.criador} (${f.socio}) - REGA: ${f.rega}</div>
+    <!-- CABECERA PRINCIPAL -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 no-print">
+      <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-9 h-9 object-contain">
+          <div>
+            <h1 class="text-lg font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent leading-tight">
+              AlacantinApp v3
+            </h1>
+            <p class="text-[10px] text-slate-400">Libro Genealógico ESGA025 (CNZ)</p>
+          </div>
         </div>
-        <span class="px-2 py-1 rounded border ${f.estado === 'Apto' ? 'border-green-500 text-green-400' : 'border-yellow-500 text-yellow-400'}">${f.estado}</span>
+        
+        <!-- ESTADO DE SESIÓN Y MODO OFFLINE -->
+        <div class="flex items-center gap-2">
+          <div id="offline-badge" class="hidden text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded-full flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Sin Conexión
+          </div>
+          <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
+            <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+            <span id="auth-state">Sesión no iniciada</span>
+            <button onclick="logout()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
+          </div>
+        </div>
       </div>
-    `;
-  });
+    </header>
 
-  html += `</div></div>`;
-  container.innerHTML = html;
-}
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
 
-// Exportar Ficha Genealógica en PDF
-function exportarFichaPDF(anilla) {
-  const ej = ejemplares.find(e => e.anilla === anilla);
-  if (!ej) return;
+      <!-- PESTAÑAS NAVEGACIÓN DESKTOP -->
+      <div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
+        <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
+          📝 Alta / Ficha Ejemplar
+        </button>
+        <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+          📋 Censo Genealógico
+        </button>
+        <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+          📊 Informes & Exportación CNZ
+        </button>
+        <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+          📖 Estándar Racial
+        </button>
+        <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
+          🛡️ Inspección Zootécnica
+        </button>
+      </div>
 
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Ficha Genealógica - ${ej.anilla}</title>
-        <style>
-          body { font-family: sans-serif; padding: 20px; color: #1e293b; }
-          .card { border: 2px solid #cbd5e1; border-radius: 8px; padding: 20px; max-width: 600px; margin: auto; }
-          h2 { color: #d97706; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-          .label { font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <h2>Ficha de Ejemplar ESGA025</h2>
-          <div class="row"><span class="label">Anilla:</span> <span>${ej.anilla}</span></div>
-          <div class="row"><span class="label">Sexo:</span> <span>${ej.sexo === 'M' ? 'Macho' : 'Hembra'}</span></div>
-          <div class="row"><span class="label">Variedad:</span> <span>${ej.variedad}</span></div>
-          <div class="row"><span class="label">Año de Nacimiento:</span> <span>${ej.anyo}</span></div>
-          <div class="row"><span class="label">Peso:</span> <span>${ej.peso} g</span></div>
-          <div class="row"><span class="label">Estado Calificación:</span> <span>${ej.estado}</span></div>
-          <div class="row"><span class="label">Padre:</span> <span>${ej.padre}</span></div>
-          <div class="row"><span class="label">Madre:</span> <span>${ej.madre}</span></div>
-          <hr/>
-          <div class="row"><span class="label">Criador:</span> <span>${ej.criador} (${ej.socio})</span></div>
-          <div class="row"><span class="label">REGA:</span> <span>${ej.rega}</span></div>
-          <div class="row"><span class="label">Observaciones:</span> <span>${ej.observaciones}</span></div>
+      <!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
+      <section id="sec-registro" class="space-y-6">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+          
+          <!-- BLOQUE 1: DATOS DEL CRIADOR Y REGA GEOLOCALIZADO -->
+          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">👤 Explotación y Criador Titular</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
+              <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
+              <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
+              <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Municipio *</label>
+              <input type="text" id="criador_municipio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Ej. Benissa / Alacant">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Provincia *</label>
+              <input type="text" id="criador_provincia" value="Alicante/Alacant" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Coordenadas GPS (CNZ Distr. Territorial)</label>
+              <div class="flex gap-2">
+                <input type="text" id="criador_gps" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 text-xs focus:border-amber-400 focus:outline-none" placeholder="Lat, Lon">
+                <button type="button" onclick="obtenerUbicacionGPS()" class="px-3 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 text-xs">📍</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOQUE 2: FICHA INDIVIDUAL DEL EJEMPLAR -->
+          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">🐓 Ficha Individual del Ave (Libro Genealógico)</h2>
+          <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Código de Anilla Inamovible *</label>
+              <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
+              <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+                <option value="M">Macho (Gallo ♂)</option>
+                <option value="H">Hembra (Gallina ♀)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
+              <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+                <optgroup label="Reconocidas FESACOCUR / Estables" class="bg-slate-900 font-semibold text-amber-400">
+                  <option value="Blanca">Blanco</option>
+                  <option value="Negra moteada">Negra moteada de blanco</option>
+                  <option value="Pinta">Pinta en negro (Exchequer)</option>
+                </optgroup>
+                <optgroup label="En Proceso de Selección (Art. 3.3 CNZ)" class="bg-slate-900 font-semibold text-amber-400">
+                  <option value="Armiñada">Armiñada</option>
+                  <option value="Milflores">Milflores</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Fecha de Nacimiento Exacta *</label>
+              <input type="date" id="fecha_nacimiento" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
+              <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Sección del Libro Genealógico *</label>
+              <select id="seccion_libro" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+                <option value="Registro Nacimientos">Registro de Nacimientos (Pollitos/Jóvenes)</option>
+                <option value="Fundadores">Sección de Fundadores / Asemejados</option>
+                <option value="Registro Definitivo">Registro Definitivo de Reproductores (Apto)</option>
+                <option value="Baja/Cedido">Baja / Sacrificio / Cedido</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Anilla Padre (Sire / Pedigrí)</label>
+              <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Anilla Madre (Dam / Pedigrí)</label>
+              <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Material en Banco de Germoplasma</label>
+              <select id="banco_germoplasma" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+                <option value="No">No depositado</option>
+                <option value="Semen">Semen congelado en Banco Oficial</option>
+                <option value="Ovocitos/ADN">Muestra biológica / ADN almacenado</option>
+              </select>
+            </div>
+
+            <!-- BLOQUE 3: FOTOGRAFÍAS OBLIGATORIAS (CNZ ART. 3.1.c) -->
+            <div class="md:col-span-3 bg-slate-900/60 p-4 rounded-lg border border-slate-700/80 my-2">
+              <h3 class="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">📸 Documentación Fotográfica Obligatoria (CNZ Art. 3.1.c)</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">Vista Lateral Completa *</label>
+                  <input type="file" id="foto_lateral" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
+                </div>
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Cabeza / Cresta / Orejilla *</label>
+                  <input type="file" id="foto_cabeza" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
+                </div>
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Patas / Tarsos *</label>
+                  <input type="file" id="foto_tarsos" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
+                </div>
+              </div>
+            </div>
+
+            <div class="md:col-span-3">
+              <label class="block text-xs text-slate-400 mb-1">Observaciones Morfológicas / Calificación</label>
+              <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Rasgos particulares, valoración morfológica..."></textarea>
+            </div>
+
+            <div class="md:col-span-3 flex justify-end gap-3 pt-2">
+              <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">Limpiar</button>
+              <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">Guardar en Libro Genealógico</button>
+            </div>
+          </form>
         </div>
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-}
+      </section>
 
-// INICIALIZACIÓN
-document.addEventListener('DOMContentLoaded', () => {
-  renderCenso();
-  if (!isAuthenticated) {
-    // Oculta todas las pestañas de contenido si no hay sesión
-    const tabs = ['registro', 'censo', 'informes', 'estandar', 'gestion'];
-    tabs.forEach(t => {
-      const sec = document.getElementById(`sec-${t}`);
-      if (sec) sec.classList.add('hidden');
-    });
-  }
-});
+      <!-- SECCIÓN 2: TABLA DE CENSO GENEALÓGICO -->
+      <section id="sec-censo" class="hidden space-y-4">
+        <div class="flex justify-between items-center flex-wrap gap-4">
+          <h2 class="text-xl font-bold text-slate-100">Censo del Libro Genealógico ESGA025</h2>
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="exportarMatrizPedigriCSV()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-slate-100 rounded-lg border border-emerald-600 flex items-center gap-2 text-xs font-semibold touch-target">
+              🧬 Exportar Matriz Pedigrí CSV
+            </button>
+            <button onclick="window.print()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-xs touch-target">
+              📄 Imprimir Censo
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+              <tr>
+                <th class="p-4">Anilla</th>
+                <th class="p-4">Sexo</th>
+                <th class="p-4">Variedad</th>
+                <th class="p-4">Tramo Edad</th>
+                <th class="p-4">Sección Libro</th>
+                <th class="p-4">Criador / REGA</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
+              <!-- Cargado dinámicamente por JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: INFORMES & EXPORTACIÓN CNZ -->
+      <section id="sec-informes" class="hidden space-y-6">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
+          <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales para el Ministerio (CNZ)</h2>
+          <p class="text-sm text-slate-300 mb-4">Estructuración de censos por tramos de edad y desgloses de variabilidad genómica requeridos por la normativa zootécnica.</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Filtrar por Sección del Libro</label>
+              <select id="filtro-seccion" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+                <option value="Todas">Todas las secciones</option>
+                <option value="Registro Definitivo">Registro Definitivo de Reproductores</option>
+                <option value="Registro Nacimientos">Registro de Nacimientos</option>
+                <option value="Fundadores">Fundadores / Asemejados</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Filtrar por Tramo de Edad Exacto</label>
+              <select id="filtro-tramo-edad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+                <option value="Todos">Todos los tramos</option>
+                <option value="Pollito">Pollitos (&lt; 6 meses)</option>
+                <option value="Joven">Jóvenes (6 - 12 meses)</option>
+                <option value="Adulto Reproductor">Adultos Reproductores (&gt; 1 año)</option>
+              </select>
+            </div>
+            <div class="flex items-end gap-2">
+              <button onclick="filtrarInformesCNZ()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
+                Generar Informe Oficial
+              </button>
+              <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">🖨</button>
+            </div>
+          </div>
+        </div>
+        <div id="resultado-informe" class="space-y-4">
+          <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
+            Haz clic en "Generar Informe Oficial" para construir el desglose técnico.
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
+      <section id="sec-estandar" class="hidden space-y-4">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
+          <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
+            <div>
+              <h2 class="text-xl font-bold text-amber-400">Estándar Racial Oficial</h2>
+              <p class="text-xs text-slate-400">Patrón oficial de la Raza Gallina Alacantina (Código ESGA025)</p>
+            </div>
+            <a href="Estandar-Alacantina2025.pdf" target="_blank" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold rounded flex items-center gap-1">
+              📄 Descargar PDF
+            </a>
+          </div>
+          <div class="w-full h-[75vh] bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+            <iframe src="Estandar-Alacantina2025.pdf" class="w-full h-full border-0" title="Estándar Racial Gallina Alacantina 2025"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 5: GESTIÓN E INSPECCIÓN ZOOTÉCNICA -->
+      <section id="sec-gestion" class="hidden space-y-4">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+          <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Inspección Zootécnica In Situ</h2>
+          <p class="text-sm text-slate-300">Reservado para Inspectores del Libro Genealógico. Emisión de actas oficiales de calificación morfológica.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- NAVEGACIÓN INFERIOR PARA MÓVILES -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 px-2 py-2 flex justify-around items-center z-40 no-print">
+      <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center gap-1 text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📝</span>
+        <span>Alta</span>
+      </button>
+      <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📋</span>
+        <span>Censo</span>
+      </button>
+      <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📊</span>
+        <span>Informes</span>
+      </button>
+      <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
+        <span class="text-lg">📖</span>
+        <span>Estándar</span>
+      </button>
+    </nav>
+
+  </div> <!-- FIN DE APP-CONTENT -->
+
+  <!-- PANTALLA DE BIENVENIDA / LOGIN -->
+  <div id="landing-login" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl text-center space-y-6">
+      <div class="space-y-2">
+        <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-32 h-32 mx-auto object-contain mb-2">
+        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+          AlacantinApp v3
+        </h1>
+        <p class="text-xs text-slate-400 font-medium tracking-wide">Gestor Oficial Pre-Libro ESGA025</p>
+      </div>
+
+      <form onsubmit="handleAuth(event)" class="space-y-4 text-left pt-2">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Correo Electrónico</label>
+          <input type="email" id="login-email" required placeholder="socio@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+        </div>
+        <button type="submit" class="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold shadow-lg transition-all active:scale-95">
+          Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
