@@ -2,6 +2,8 @@
 // ALACANTINAPP V3 - SERVICE WORKER (ARQUITECTURA OFFLINE-FIRST)
 // ============================================================================
 const CACHE_NAME = 'alacantinapp-v3-cache-v1'; 
+
+// Únicamente activos locales del propio origen (evita fallos de CORS con CDNs externas)
 const ASSETS_TO_CACHE = [ 
   './', 
   './index.html', 
@@ -10,18 +12,14 @@ const ASSETS_TO_CACHE = [
   './manifest.json',
   './logo.png',
   './icons/icon-192.png',
-  './icons/icon-512.png',
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2' 
+  './icons/icon-512.png'
 ]; 
 
-// 1. Instalación: Almacenar en caché todos los activos estáticos y librerías CDN
+// 1. Instalación: Almacenar en caché exclusivamente los activos locales estáticos
 self.addEventListener('install', (event) => { 
   event.waitUntil( 
     caches.open(CACHE_NAME).then((cache) => { 
-      console.log('[Service Worker v3] Cacheando recursos principales de la PWA...'); 
+      console.log('[Service Worker v3] Cacheando recursos locales de la PWA...'); 
       return cache.addAll(ASSETS_TO_CACHE); 
     }).then(() => self.skipWaiting()) 
   ); 
@@ -43,27 +41,19 @@ self.addEventListener('activate', (event) => {
   ); 
 }); 
 
-// 3. Estrategia de Red/Caché: Stale-While-Revalidate con respaldo Offline
+// 3. Estrategia de Peticiones: Cache First para estáticos locales, Network First para el resto
 self.addEventListener('fetch', (event) => { 
-  // Ignorar peticiones que no sean GET (como escrituras directas a Supabase)
+  // Ignorar peticiones que no sean GET (ej. API REST / GraphQL de Supabase)
   if (event.request.method !== 'GET') return; 
 
   event.respondWith( 
     caches.match(event.request).then((cachedResponse) => { 
-      const fetchPromise = fetch(event.request).then((networkResponse) => { 
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') { 
-          const responseToCache = networkResponse.clone(); 
-          caches.open(CACHE_NAME).then((cache) => { 
-            cache.put(event.request, responseToCache); 
-          }); 
-        } 
-        return networkResponse; 
-      }).catch((err) => { 
-        console.log('[Service Worker v3] Modo sin conexión activado para:', event.request.url); 
+      if (cachedResponse) { 
+        return cachedResponse; 
+      } 
+      return fetch(event.request).catch((err) => {
+        console.log('[Service Worker v3] Petición sin conexión/fallida:', event.request.url);
       }); 
-
-      // Responder inmediatamente desde la caché local si existe; en su defecto, consultar la red
-      return cachedResponse || fetchPromise; 
     }) 
   ); 
 });
