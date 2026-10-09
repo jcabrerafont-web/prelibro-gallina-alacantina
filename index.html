@@ -1,263 +1,278 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlacantinApp - Gestor Pre-Libro ESGA025</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-0">
-
-  <!-- CABECERA PRINCIPAL -->
-  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 no-print">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <span class="text-2xl">🐓</span>
-        <div>
-          <h1 class="text-lg font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent leading-tight">
-            AlacantinApp
-          </h1>
-          <p class="text-[10px] text-slate-400">Pre-Libro ESGA025</p>
-        </div>
-      </div>
-      <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
-        <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
-        <span id="auth-state">Sesión no iniciada</span>
-        <button onclick="toggleAuthModal()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
-      </div>
+<!-- ESTADO DE SESIÓN Y MODO OFFLINE -->
+  <div class="flex items-center gap-2">
+    <div id="offline-badge" class="hidden text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded-full flex items-center gap-1">
+      <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+      Sin Conexión (Modo Local)
     </div>
-  </header>
-
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="max-w-7xl mx-auto px-4 py-6">
-    
-    <!-- PESTAÑAS DESKTOP -->
-    <div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
-      <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
-        📝 Alta Ejemplar
-      </button>
-      <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-        📋 Censo
-      </button>
-      <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-        📊 Informes
-      </button>
-      <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-        📖 Estándar
-      </button>
-      <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
-        🛡️ Validación
-      </button>
+    <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
+      <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+      <span id="auth-state">Sesión no iniciada</span>
+      <button onclick="toggleAuthModal()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
     </div>
+  </div>
+</div>
+<!-- PESTAÑAS NAVEGACIÓN DESKTOP -->
+<div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
+  <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
+    📝 Alta / Ficha Ejemplar
+  </button>
+  <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+    📋 Censo Genealógico
+  </button>
+  <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+    📊 Informes & Exportación CNZ
+  </button>
+  <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
+    📖 Estándar Racial
+  </button>
+  <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
+    🛡️ Inspección Zootécnica
+  </button>
+</div>
 
-    <!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
-    <section id="sec-registro" class="space-y-6">
-      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-        <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
-          👤 Datos del Criador Titular
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
-            <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
-            <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
-            <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
-          </div>
-        </div>
+<!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
+<section id="sec-registro" class="space-y-6">
+  <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
 
-        <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
-          🐓 Ficha Individual del Ejemplar
-        </h2>
-        
-        <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Código de Anilla *</label>
-            <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
-            <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-              <option value="M">Macho (Gallo)</option>
-              <option value="H">Hembra (Gallina)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
-            <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-              <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
-                <option value="Blanca" class="text-slate-100">Blanco</option>
-                <option value="Negra moteada" class="text-slate-100">Negra moteada de blanco</option>
-                <option value="Pinta" class="text-slate-100">Pinta en negro (Exchequer)</option>
-              </optgroup>
-              <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
-                <option value="Armiñada" class="text-slate-100">Armiñada</option>
-                <option value="Milflores" class="text-slate-100">Milflores</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Año de Nacimiento *</label>
-            <input type="number" id="anyo" value="2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
-            <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Estado de Puntuación</label>
-            <select id="estado" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-              <option value="Pendiente">Pendiente de Inspección</option>
-              <option value="Apto">Apto (Pre-Libro)</option>
-              <option value="No Apto">No Apto</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Anilla Padre</label>
-            <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-          </div>
-
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Anilla Madre</label>
-            <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-          </div>
-
-          <div class="md:col-span-3">
-            <label class="block text-xs text-slate-400 mb-1">Observaciones / Rasgos Morfológicos</label>
-            <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Detalles morfológicos u observaciones del ejemplar..."></textarea>
-          </div>
-
-          <div class="md:col-span-3 flex justify-end gap-3 pt-2">
-            <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">
-              Limpiar
-            </button>
-            <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">
-              Guardar Ejemplar
-            </button>
-          </div>
-        </form>
+    <!-- BLOQUE 1: DATOS DEL CRIADOR Y REGA GEOLOCALIZADO -->
+    <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
+      👤 Explotación y Criador Titular
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
+        <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
       </div>
-    </section>
-
-    <!-- SECCIÓN 2: TABLA DE CENSO -->
-    <section id="sec-censo" class="hidden space-y-4">
-      <div class="flex justify-between items-center flex-wrap gap-4">
-        <h2 class="text-xl font-bold text-slate-100">Censo de Ejemplares Registrados</h2>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
+        <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
+        <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Municipio *</label>
+        <input type="text" id="criador_municipio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Ej. Alacant / Alicante">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Provincia *</label>
+        <input type="text" id="criador_provincia" value="Alicante/Alacant" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Coordenadas GPS (CNZ Distr. Territorial)</label>
         <div class="flex gap-2">
-          <button onclick="generarPDFCenso()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-sm touch-target">
-            📄 Exportar Censo PDF
-          </button>
+          <input type="text" id="criador_gps" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 text-xs focus:border-amber-400 focus:outline-none" placeholder="Lat, Lon">
+          <button type="button" onclick="obtenerUbicacionGPS()" class="px-3 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 text-xs">📍</button>
         </div>
       </div>
+    </div>
 
-      <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
-        <table class="w-full text-left text-sm text-slate-300">
-          <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
-            <tr>
-              <th class="p-4">Anilla</th>
-              <th class="p-4">Sexo</th>
-              <th class="p-4">Variedad</th>
-              <th class="p-4">Año</th>
-              <th class="p-4">Peso</th>
-              <th class="p-4">Estado</th>
-              <th class="p-4 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
-            <!-- Cargado dinámicamente por JS -->
-          </tbody>
-        </table>
+    <!-- BLOQUE 2: FICHA INDIVIDUAL DEL EJEMPLAR -->
+    <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">
+      🐓 Ficha Individual del Ave (Libro Genealógico)
+    </h2>
+    <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Código de Anilla Inamovible *</label>
+        <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
       </div>
-    </section>
 
-    <!-- SECCIÓN 3: INFORMES Y REVISIÓN -->
-    <section id="sec-informes" class="hidden space-y-6">
-      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
-        <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales</h2>
-        <p class="text-sm text-slate-300 mb-4">Aplica los filtros necesarios para generar e imprimir las actas de revisión del Pre-Libro ESGA025.</p>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
+        <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          <option value="M">Macho (Gallo ♂)</option>
+          <option value="H">Hembra (Gallina ♀)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
+        <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          <optgroup label="Reconocidas FESACOCUR / Estables" class="bg-slate-900 font-semibold text-amber-400">
+            <option value="Blanca">Blanco</option>
+            <option value="Negra moteada">Negra moteada de blanco</option>
+            <option value="Pinta">Pinta en negro (Exchequer)</option>
+          </optgroup>
+          <optgroup label="En Proceso de Selección (Art. 3.3 CNZ)" class="bg-slate-900 font-semibold text-amber-400">
+            <option value="Armiñada">Armiñada</option>
+            <option value="Milflores">Milflores</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Fecha de Nacimiento Exacta * (CNZ Edad)</label>
+        <input type="date" id="fecha_nacimiento" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
+        <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Sección del Libro Genealógico *</label>
+        <select id="seccion_libro" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          <option value="Registro Nacimientos">Registro de Nacimientos (Pollitos/Jóvenes)</option>
+          <option value="Fundadores">Sección de Fundadores / Asemejados</option>
+          <option value="Registro Definitivo">Registro Definitivo de Reproductores (Apto)</option>
+          <option value="Baja/Cedido">Baja / Sacrificio / Cedido</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Anilla Padre (Sire / Pedigrí)</label>
+        <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Anilla Madre (Dam / Pedigrí)</label>
+        <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Material en Banco de Germoplasma (Punto 3.1.m CNZ)</label>
+        <select id="banco_germoplasma" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+          <option value="No">No depositado</option>
+          <option value="Semen">Semen congelado en Banco Oficial</option>
+          <option value="Ovocitos/ADN">Muestra biológica / ADN almacenado</option>
+        </select>
+      </div>
+
+      <!-- BLOQUE 3: FOTOGRAFÍAS OBLIGATORIAS (PUNTO 3.1.c CNZ) -->
+      <div class="md:col-span-3 bg-slate-900/60 p-4 rounded-lg border border-slate-700/80 my-2">
+        <h3 class="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">
+          📸 Documentación Fotográfica Obligatoria (CNZ Art. 3.1.c)
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Filtrar por Estado</label>
-            <select id="filtro-estado" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-              <option value="Todos">Todos los estados</option>
-              <option value="Apto">Apto (Pre-Libro)</option>
-              <option value="Pendiente">Pendiente de Inspección</option>
-              <option value="No Apto">No Apto</option>
-            </select>
+            <label class="block text-[11px] text-slate-400 mb-1">Vista Lateral Completa *</label>
+            <input type="file" id="foto_lateral" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Filtrar por Variedad</label>
-            <select id="filtro-variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-              <option value="Todas">Todas las variedades</option>
-              <optgroup label="Reconocidas FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
-                <option value="Blanco" class="text-slate-100">Blanco</option>
-                <option value="Negra moteada de blanco" class="text-slate-100">Negra moteada de blanco</option>
-                <option value="Pinta en negro" class="text-slate-100">Pinta en negro (Exchequer)</option>
-              </optgroup>
-              <optgroup label="En proceso FESACOCUR" class="bg-slate-900 font-semibold text-amber-400">
-                <option value="Armiñada en negro" class="text-slate-100">Armiñada en negro</option>
-                <option value="Milflores" class="text-slate-100">Milflores</option>
-              </optgroup>
-            </select>
+            <label class="block text-[11px] text-slate-400 mb-1">Detalle Cabeza / Cresta / Orejilla *</label>
+            <input type="file" id="foto_cabeza" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
           </div>
-          <div class="flex items-end gap-2">
-            <button onclick="filtrarInformes()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
-              Generar Informe
-            </button>
-            <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">
-              🖨
-            </button>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Detalle Patas / Tarsos *</label>
+            <input type="file" id="foto_tarsos" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
           </div>
         </div>
       </div>
 
-      <!-- VISTA IMPRESA / PREVISUALIZACIÓN -->
-      <div id="resultado-informe" class="space-y-4">
-        <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
-          Haz clic en "Generar Informe" para construir la lista filtrada.
-        </div>
+      <div class="md:col-span-3">
+        <label class="block text-xs text-slate-400 mb-1">Observaciones Morfológicas / Calificación</label>
+        <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Rasgos particulares, valoración morfológica..."></textarea>
       </div>
-    </section>
 
-    <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
-    <section id="sec-estandar" class="hidden space-y-4">
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-        <div>
-          <h2 class="text-lg font-semibold text-amber-400">Estándar Racial Oficial (FESACOCUR)</h2>
-          <p class="text-xs text-slate-400">Patrón de la Raza Gallina Alacantina (Código ESGA025)</p>
-        </div>
-        <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
-          Abrir FESACOCUR
-        </a>
+      <div class="md:col-span-3 flex justify-end gap-3 pt-2">
+        <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">
+          Limpiar
+        </button>
+        <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">
+          Guardar en Libro Genealógico
+        </button>
       </div>
-    </section>
+    </form>
+  </div>
+</section>
 
-    <!-- SECCIÓN 5: GESTIÓN Y VALIDACIÓN -->
-    <section id="sec-gestion" class="hidden space-y-4">
-      <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-        <h2 class="text-lg font-semibold text-amber-400 mb-2">Validación de Datos del Pre-Libro</h2>
-        <p class="text-sm text-slate-300">Panel reservado para inspectores y administradores del pre-libro de orígenes.</p>
+<!-- SECCIÓN 2: TABLA DE CENSO GENEALÓGICO -->
+<section id="sec-censo" class="hidden space-y-4">
+  <div class="flex justify-between items-center flex-wrap gap-4">
+    <h2 class="text-xl font-bold text-slate-100">Censo del Libro Genealógico ESGA025</h2>
+    <div class="flex gap-2 flex-wrap">
+      <button onclick="exportarMatrizPedigriCSV()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-slate-100 rounded-lg border border-emerald-600 flex items-center gap-2 text-xs font-semibold touch-target">
+        🧬 Exportar Matriz Pedigrí CSV (Universidad Ne/Consanguinidad)
+      </button>
+      <button onclick="generarPDFCenso()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-xs touch-target">
+        📄 Exportar Censo PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
+    <table class="w-full text-left text-sm text-slate-300">
+      <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+        <tr>
+          <th class="p-4">Anilla</th>
+          <th class="p-4">Sexo</th>
+          <th class="p-4">Variedad</th>
+          <th class="p-4">Tramo Edad</th>
+          <th class="p-4">Sección Libro</th>
+          <th class="p-4">Criador / REGA</th>
+          <th class="p-4 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
+        <!-- Cargado dinámicamente por JS -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECCIÓN 3: INFORMES & EXPORTACIÓN CNZ -->
+<section id="sec-informes" class="hidden space-y-6">
+  <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
+    <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales para el Ministerio (CNZ)</h2>
+    <p class="text-sm text-slate-300 mb-4">Estructuración de censos por tramos de edad y desgloses de variabilidad genómica requeridos por la normativa zootécnica.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Filtrar por Sección del Libro</label>
+        <select id="filtro-seccion" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+          <option value="Todas">Todas las secciones</option>
+          <option value="Registro Definitivo">Registro Definitivo de Reproductores</option>
+          <option value="Registro Nacimientos">Registro de Nacimientos</option>
+          <option value="Fundadores">Fundadores / Asemejados</option>
+        </select>
       </div>
-    </section>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Filtrar por Tramo de Edad Exacto (Punto 3.1.f CNZ)</label>
+        <select id="filtro-tramo-edad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
+          <option value="Todos">Todos los tramos</option>
+          <option value="Pollito">Pollitos (< 6 meses)</option>
+          <option value="Joven">Jóvenes (6 - 12 meses)</option>
+          <option value="Adulto Reproductor">Adultos Reproductores (> 1 año)</option>
+        </select>
+      </div>
+      <div class="flex items-end gap-2">
+        <button onclick="filtrarInformesCNZ()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
+          Generar Informe Oficial
+        </button>
+        <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">
+          🖨
+        </button>
+      </div>
+    </div>
+  </div>
 
-  </main>
+  <div id="resultado-informe" class="space-y-4">
+    <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
+      Haz clic en "Generar Informe Oficial" para construir el desglose técnico.
+    </div>
+  </div>
+</section>
 
-  <script src="app.js"></script>
-</body>
-</html>
+<!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
+<section id="sec-estandar" class="hidden space-y-4">
+  <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+    <div>
+      <h2 class="text-lg font-semibold text-amber-400">Estándar Racial Oficial Gallina Alacantina (ESGA025)</h2>
+      <p class="text-xs text-slate-400">Patrón aprobado por el Club y homologado por FESACOCUR</p>
+    </div>
+    <a href="https://fesacocur.es" target="_blank" class="px-3 py-1.5 bg-slate-700 text-amber-400 border border-slate-600 text-xs rounded-lg hover:bg-slate-600">
+      Ver FESACOCUR
+    </a>
+  </div>
+</section>
+
+<!-- SECCIÓN 5: GESTIÓN E INSPECCIÓN ZOOTÉCNICA -->
+<section id="sec-gestion" class="hidden space-y-4">
+  <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+    <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Inspección Zootécnica In Situ</h2>
+    <p class="text-sm text-slate-300">Reservado para Inspectores del Libro Genealógico. Emisión de actas oficiales de calificación morfológica.</p>
+  </div>
+</section>
