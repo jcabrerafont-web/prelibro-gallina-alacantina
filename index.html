@@ -317,7 +317,7 @@
 
   </div> <!-- FIN DE APP-CONTENT -->
 
-  <!-- PANTALLA DE BIENVENIDA / LOGIN -->
+ <!-- PANTALLA DE BIENVENIDA / LOGIN -->
   <div id="landing-login" class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl text-center space-y-6">
       <div class="space-y-2">
@@ -335,4 +335,25 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
+        </div>
+        <button type="submit" id="btn-login" class="w-full py-3 bg-amber-500 hover:bg-amber-600 font-bold text-slate-950 rounded-lg shadow-lg transition touch-target">
+          Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT PRINCIPAL Y SERVICE WORKER -->
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registrado correctamente:', reg.scope))
+          .catch(err => console.error('Error al registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
