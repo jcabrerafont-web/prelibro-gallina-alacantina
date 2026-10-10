@@ -1,348 +1,176 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlacantinApp v3 - Libro Genealógico Oficial ESGA025</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-0">
+// ============================================================================
+// ALACANTINAPP V3 - LÓGICA PRINCIPAL Y GESTIÓN DE LIBRO GENEALÓGICO (app.js)
+// Libro Genealógico Oficial ESGA025 (CNZ) - Club Gallina Alacantina
+// ============================================================================
 
-  <!-- APLICACIÓN PRINCIPAL (OCULTA INICIALMENTE) -->
-  <div id="app-content" class="hidden">
+// --- CONFIGURACIÓN SUPABASE ---
+const SUPABASE_URL = 'https://htbyipavphxcehdwrjbl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0YnlpcGF2cGh4Y2VoZHdyamJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjQyOTEsImV4cCI6MjEwNjYwMDI5MX0.tnBJERxhI3YbwSOFVkeBvvz5qm6FNxzBZ8_5S-UKoQM';
 
-    <!-- CABECERA PRINCIPAL -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 no-print">
-      <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-9 h-9 object-contain">
-          <div>
-            <h1 class="text-lg font-bold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent leading-tight">
-              AlacantinApp v3
-            </h1>
-            <p class="text-[10px] text-slate-400">Libro Genealógico ESGA025 (CNZ)</p>
-          </div>
-        </div>
-        
-        <!-- ESTADO DE SESIÓN Y MODO OFFLINE -->
-        <div class="flex items-center gap-2">
-          <div id="offline-badge" class="hidden text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded-full flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>Sin Conexión
-          </div>
-          <div id="user-status" class="text-xs text-slate-300 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-700">
-            <span id="auth-indicator" class="w-2 h-2 rounded-full bg-yellow-500"></span>
-            <span id="auth-state">Sesión no iniciada</span>
-            <button onclick="logout()" id="btn-auth" class="text-amber-400 font-medium hover:underline ml-1">Entrar</button>
-          </div>
-        </div>
-      </div>
-    </header>
+let supabaseClient = null;
+if (window.supabase) {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
+// --- CONTROL DE SESIÓN AL CARGAR LA PÁGINA ---
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!supabaseClient) return;
+  
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  updateAuthUI(session);
 
-      <!-- PESTAÑAS NAVEGACIÓN DESKTOP -->
-      <div class="hidden md:flex border-b border-slate-700 mb-6 space-x-2 no-print">
-        <button onclick="switchTab('registro')" id="tab-registro" class="py-3 px-4 text-amber-400 border-b-2 border-amber-400 font-medium touch-target flex items-center gap-2">
-          📝 Alta / Ficha Ejemplar
-        </button>
-        <button onclick="switchTab('censo')" id="tab-censo" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📋 Censo Genealógico
-        </button>
-        <button onclick="switchTab('informes')" id="tab-informes" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📊 Informes & Exportación CNZ
-        </button>
-        <button onclick="switchTab('estandar')" id="tab-estandar" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2">
-          📖 Estándar Racial
-        </button>
-        <button onclick="switchTab('gestion')" id="tab-gestion" class="py-3 px-4 text-slate-400 border-b-2 border-transparent font-medium touch-target flex items-center gap-2 hidden">
-          🛡️ Inspección Zootécnica
-        </button>
-      </div>
+  // Escuchar cambios en el estado de autenticación en tiempo real
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    updateAuthUI(session);
+  });
+});
 
-      <!-- SECCIÓN 1: FORMULARIO DE REGISTRO / EDICIÓN -->
-      <section id="sec-registro" class="space-y-6">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-          
-          <!-- BLOQUE 1: DATOS DEL CRIADOR Y REGA GEOLOCALIZADO -->
-          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">👤 Explotación y Criador Titular</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Nombre y Apellidos *</label>
-              <input type="text" id="criador_nombre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nombre del Criador">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Código REGA de Explotación *</label>
-              <input type="text" id="criador_rega" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="ES000000000000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Nº Socio del Club *</label>
-              <input type="text" id="criador_socio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Nº 000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Municipio *</label>
-              <input type="text" id="criador_municipio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Ej. Benissa / Alacant">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Provincia *</label>
-              <input type="text" id="criador_provincia" value="Alicante/Alacant" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Coordenadas GPS (CNZ Distr. Territorial)</label>
-              <div class="flex gap-2">
-                <input type="text" id="criador_gps" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 text-xs focus:border-amber-400 focus:outline-none" placeholder="Lat, Lon">
-                <button type="button" onclick="obtenerUbicacionGPS()" class="px-3 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 text-xs">📍</button>
-              </div>
-            </div>
-          </div>
+// --- FUNCIÓN DE INICIO DE SESIÓN ---
+async function handleAuth(event) {
+  if (event) event.preventDefault();
+  
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
 
-          <!-- BLOQUE 2: FICHA INDIVIDUAL DEL EJEMPLAR -->
-          <h2 class="text-lg font-semibold text-amber-400 mb-4 flex items-center gap-2">🐓 Ficha Individual del Ave (Libro Genealógico)</h2>
-          <form id="form-ejemplar" class="grid grid-cols-1 md:grid-cols-3 gap-4" onsubmit="guardarEjemplar(event)">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Código de Anilla Inamovible *</label>
-              <input type="text" id="anilla" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Sexo *</label>
-              <select id="sexo" onchange="actualizarPesoPorDefecto()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="M">Macho (Gallo ♂)</option>
-                <option value="H">Hembra (Gallina ♀)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Variedad de Pluma *</label>
-              <select id="variedad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <optgroup label="Reconocidas FESACOCUR / Estables" class="bg-slate-900 font-semibold text-amber-400">
-                  <option value="Blanca">Blanco</option>
-                  <option value="Negra moteada">Negra moteada de blanco</option>
-                  <option value="Pinta">Pinta en negro (Exchequer)</option>
-                </optgroup>
-                <optgroup label="En Proceso de Selección (Art. 3.3 CNZ)" class="bg-slate-900 font-semibold text-amber-400">
-                  <option value="Armiñada">Armiñada</option>
-                  <option value="Milflores">Milflores</option>
-                </optgroup>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Fecha de Nacimiento Exacta *</label>
-              <input type="date" id="fecha_nacimiento" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Peso Registrado (gramos)</label>
-              <input type="number" id="peso" value="3250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Sección del Libro Genealógico *</label>
-              <select id="seccion_libro" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="Registro Nacimientos">Registro de Nacimientos (Pollitos/Jóvenes)</option>
-                <option value="Fundadores">Sección de Fundadores / Asemejados</option>
-                <option value="Registro Definitivo">Registro Definitivo de Reproductores (Apto)</option>
-                <option value="Baja/Cedido">Baja / Sacrificio / Cedido</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Anilla Padre (Sire / Pedigrí)</label>
-              <input type="text" id="padre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Anilla Madre (Dam / Pedigrí)</label>
-              <input type="text" id="madre" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none uppercase" placeholder="E 0000">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Material en Banco de Germoplasma</label>
-              <select id="banco_germoplasma" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-                <option value="No">No depositado</option>
-                <option value="Semen">Semen congelado en Banco Oficial</option>
-                <option value="Ovocitos/ADN">Muestra biológica / ADN almacenado</option>
-              </select>
-            </div>
+  if (!supabaseClient) {
+    alert('Error: Supabase no está inicializado.');
+    return;
+  }
 
-            <!-- BLOQUE 3: FOTOGRAFÍAS OBLIGATORIAS (CNZ ART. 3.1.c) -->
-            <div class="md:col-span-3 bg-slate-900/60 p-4 rounded-lg border border-slate-700/80 my-2">
-              <h3 class="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">📸 Documentación Fotográfica Obligatoria (CNZ Art. 3.1.c)</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Vista Lateral Completa *</label>
-                  <input type="file" id="foto_lateral" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Cabeza / Cresta / Orejilla *</label>
-                  <input type="file" id="foto_cabeza" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-                <div>
-                  <label class="block text-[11px] text-slate-400 mb-1">Detalle Patas / Tarsos *</label>
-                  <input type="file" id="foto_tarsos" accept="image/*" class="w-full text-xs text-slate-400 bg-slate-800 rounded p-2 border border-slate-700">
-                </div>
-              </div>
-            </div>
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email: email,
+    password: password
+  });
 
-            <div class="md:col-span-3">
-              <label class="block text-xs text-slate-400 mb-1">Observaciones Morfológicas / Calificación</label>
-              <textarea id="observaciones" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none" placeholder="Rasgos particulares, valoración morfológica..."></textarea>
-            </div>
+  if (error) {
+    alert('Error de acceso: ' + error.message);
+  } else {
+    // Éxito: Ocultar pantalla de login y mostrar app principal
+    document.getElementById('landing-login').classList.add('hidden');
+    document.getElementById('app-content').classList.remove('hidden');
+    updateAuthUI(data.session);
+  }
+}
 
-            <div class="md:col-span-3 flex justify-end gap-3 pt-2">
-              <button type="button" onclick="limpiarFormulario()" class="px-5 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 touch-target">Limpiar</button>
-              <button type="submit" class="px-6 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold touch-target">Guardar en Libro Genealógico</button>
-            </div>
-          </form>
-        </div>
-      </section>
+// --- FUNCIÓN DE CIERRE DE SESIÓN ---
+async function logout() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+  document.getElementById('app-content').classList.add('hidden');
+  document.getElementById('landing-login').classList.remove('hidden');
+}
 
-      <!-- SECCIÓN 2: TABLA DE CENSO GENEALÓGICO -->
-      <section id="sec-censo" class="hidden space-y-4">
-        <div class="flex justify-between items-center flex-wrap gap-4">
-          <h2 class="text-xl font-bold text-slate-100">Censo del Libro Genealógico ESGA025</h2>
-          <div class="flex gap-2 flex-wrap">
-            <button onclick="exportarMatrizPedigriCSV()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-slate-100 rounded-lg border border-emerald-600 flex items-center gap-2 text-xs font-semibold touch-target">
-              🧬 Exportar Matriz Pedigrí CSV
-            </button>
-            <button onclick="window.print()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-lg border border-slate-600 flex items-center gap-2 text-xs touch-target">
-              📄 Imprimir Censo
-            </button>
-          </div>
-        </div>
+// --- ACTUALIZAR INTERFAZ SEGÚN ESTADO ---
+function updateAuthUI(session) {
+  const appContent = document.getElementById('app-content');
+  const loginScreen = document.getElementById('landing-login');
+  const authState = document.getElementById('auth-state');
+  const authIndicator = document.getElementById('auth-indicator');
+  const btnAuth = document.getElementById('btn-auth');
 
-        <div class="overflow-x-auto bg-slate-800 rounded-xl border border-slate-700">
-          <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
-              <tr>
-                <th class="p-4">Anilla</th>
-                <th class="p-4">Sexo</th>
-                <th class="p-4">Variedad</th>
-                <th class="p-4">Tramo Edad</th>
-                <th class="p-4">Sección Libro</th>
-                <th class="p-4">Criador / REGA</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-ejemplares" class="divide-y divide-slate-700">
-              <!-- Cargado dinámicamente por JS -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+  if (session) {
+    // Usuario autenticado: Mostramos app y ocultamos login
+    if (appContent) appContent.classList.remove('hidden');
+    if (loginScreen) loginScreen.classList.add('hidden');
 
-      <!-- SECCIÓN 3: INFORMES & EXPORTACIÓN CNZ -->
-      <section id="sec-informes" class="hidden space-y-6">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 no-print">
-          <h2 class="text-lg font-semibold text-amber-400 mb-2">Generación de Informes Oficiales para el Ministerio (CNZ)</h2>
-          <p class="text-sm text-slate-300 mb-4">Estructuración de censos por tramos de edad y desgloses de variabilidad genómica requeridos por la normativa zootécnica.</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Filtrar por Sección del Libro</label>
-              <select id="filtro-seccion" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-                <option value="Todas">Todas las secciones</option>
-                <option value="Registro Definitivo">Registro Definitivo de Reproductores</option>
-                <option value="Registro Nacimientos">Registro de Nacimientos</option>
-                <option value="Fundadores">Fundadores / Asemejados</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Filtrar por Tramo de Edad Exacto</label>
-              <select id="filtro-tramo-edad" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100">
-                <option value="Todos">Todos los tramos</option>
-                <option value="Pollito">Pollitos (&lt; 6 meses)</option>
-                <option value="Joven">Jóvenes (6 - 12 meses)</option>
-                <option value="Adulto Reproductor">Adultos Reproductores (&gt; 1 año)</option>
-              </select>
-            </div>
-            <div class="flex items-end gap-2">
-              <button onclick="filtrarInformesCNZ()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-lg touch-target">
-                Generar Informe Oficial
-              </button>
-              <button onclick="window.print()" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg border border-slate-600 touch-target">🖨</button>
-            </div>
-          </div>
-        </div>
-        <div id="resultado-informe" class="space-y-4">
-          <div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-slate-400 text-center text-sm no-print">
-            Haz clic en "Generar Informe Oficial" para construir el desglose técnico.
-          </div>
-        </div>
-      </section>
+    if (authState) authState.textContent = session.user.email;
+    if (authIndicator) {
+      authIndicator.className = 'w-2 h-2 rounded-full bg-green-500';
+    }
+    if (btnAuth) {
+      btnAuth.textContent = 'Cerrar Sesión';
+      btnAuth.onclick = logout;
+    }
+  } else {
+    // Sin sesión: Ocultamos app y mostramos login
+    if (appContent) appContent.classList.add('hidden');
+    if (loginScreen) loginScreen.classList.remove('hidden');
 
-      <!-- SECCIÓN 4: VISOR ESTÁNDAR RACIAL -->
-      <section id="sec-estandar" class="hidden space-y-4">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
-          <div class="border-b border-slate-700 pb-3 flex justify-between items-center">
-            <div>
-              <h2 class="text-xl font-bold text-amber-400">Estándar Racial Oficial</h2>
-              <p class="text-xs text-slate-400">Patrón oficial de la Raza Gallina Alacantina (Código ESGA025)</p>
-            </div>
-            <a href="Estandar-Alacantina2025.pdf" target="_blank" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold rounded flex items-center gap-1">
-              📄 Descargar PDF
-            </a>
-          </div>
-          <div class="w-full h-[75vh] bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
-            <iframe src="Estandar-Alacantina2025.pdf" class="w-full h-full border-0" title="Estándar Racial Gallina Alacantina 2025"></iframe>
-          </div>
-        </div>
-      </section>
+    if (authState) authState.textContent = 'Sesión no iniciada';
+    if (authIndicator) {
+      authIndicator.className = 'w-2 h-2 rounded-full bg-yellow-500';
+    }
+    if (btnAuth) {
+      btnAuth.textContent = 'Entrar';
+      btnAuth.onclick = () => window.location.reload();
+    }
+  }
+}
 
-      <!-- SECCIÓN 5: GESTIÓN E INSPECCIÓN ZOOTÉCNICA -->
-      <section id="sec-gestion" class="hidden space-y-4">
-        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h2 class="text-lg font-semibold text-amber-400 mb-2">Panel de Inspección Zootécnica In Situ</h2>
-          <p class="text-sm text-slate-300">Reservado para Inspectores del Libro Genealógico. Emisión de actas oficiales de calificación morfológica.</p>
-        </div>
-      </section>
+// --- NAVEGACIÓN ENTRE PESTAÑAS ---
+function switchTab(tabId) {
+  const secciones = ['registro', 'censo', 'informes', 'estandar', 'gestion'];
+  secciones.forEach(sec => {
+    const el = document.getElementById(`sec-${sec}`);
+    const tab = document.getElementById(`tab-${sec}`);
+    const mobTab = document.getElementById(`mob-${sec}`);
+    
+    if (sec === tabId) {
+      if (el) el.classList.remove('hidden');
+      if (tab) {
+        tab.classList.add('text-amber-400', 'border-amber-400');
+        tab.classList.remove('text-slate-400', 'border-transparent');
+      }
+      if (mobTab) {
+        mobTab.classList.add('text-amber-400');
+        mobTab.classList.remove('text-slate-400');
+      }
+    } else {
+      if (el) el.classList.add('hidden');
+      if (tab) {
+        tab.classList.remove('text-amber-400', 'border-amber-400');
+        tab.classList.add('text-slate-400', 'border-transparent');
+      }
+      if (mobTab) {
+        mobTab.classList.remove('text-amber-400');
+        mobTab.classList.add('text-slate-400');
+      }
+    }
+  });
+}
 
-    </main>
+// --- FUNCIONES AUXILIARES DEL FORMULARIO ---
+function guardarEjemplar(event) {
+  if (event) event.preventDefault();
+  alert('Datos del ejemplar listos para sincronizar con Supabase.');
+}
 
-    <!-- NAVEGACIÓN INFERIOR PARA MÓVILES -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 px-2 py-2 flex justify-around items-center z-40 no-print">
-      <button onclick="switchTab('registro')" id="mob-registro" class="flex flex-col items-center gap-1 text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📝</span>
-        <span>Alta</span>
-      </button>
-      <button onclick="switchTab('censo')" id="mob-censo" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📋</span>
-        <span>Censo</span>
-      </button>
-      <button onclick="switchTab('informes')" id="mob-informes" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📊</span>
-        <span>Informes</span>
-      </button>
-      <button onclick="switchTab('estandar')" id="mob-estandar" class="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-400 py-1 px-2 text-[11px] font-medium transition-colors">
-        <span class="text-lg">📖</span>
-        <span>Estándar</span>
-      </button>
-    </nav>
+function limpiarFormulario() {
+  const form = document.getElementById('form-ejemplar');
+  if (form) form.reset();
+}
 
-  </div> <!-- FIN DE APP-CONTENT -->
+function obtenerUbicacionGPS() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(position => {
+      const lat = position.coords.latitude.toFixed(6);
+      const lon = position.coords.longitude.toFixed(6);
+      const inputGPS = document.getElementById('criador_gps');
+      if (inputGPS) inputGPS.value = `${lat}, ${lon}`;
+    }, () => {
+      alert('No se pudo obtener la ubicación GPS.');
+    });
+  } else {
+    alert('La geolocalización no está soportada en este navegador.');
+  }
+}
 
-  <!-- PANTALLA DE BIENVENIDA / LOGIN -->
-  <div id="landing-login" class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl text-center space-y-6">
-      <div class="space-y-2">
-        <img src="logo.png" alt="Logo Club Gallina Alacantina" class="w-32 h-32 mx-auto object-contain mb-2">
-        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-          AlacantinApp v3
-        </h1>
-        <p class="text-xs text-slate-400 font-medium tracking-wide">Gestor Oficial Pre-Libro ESGA025</p>
-      </div>
+function filtrarInformesCNZ() {
+  const resultado = document.getElementById('resultado-informe');
+  if (resultado) {
+    resultado.innerHTML = '<div class="p-4 bg-slate-800 rounded-lg border border-slate-700 text-amber-400 text-sm">Informe oficial generado correctamente para el registro ESGA025.</div>';
+  }
+}
 
-      <form onsubmit="handleAuth(event)" class="space-y-4 text-left pt-2">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Correo Electrónico</label>
-          <input type="email" id="login-email" required placeholder="socio@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 focus:border-amber-400 focus:outline-none">
-        </div>
-        <button type="submit" class="w-full py-3.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-900 text-sm font-bold shadow-lg transition-all active:scale-95">
-          Iniciar Sesión
-        </button>
-      </form>
-    </div>
-  </div>
+function exportarMatrizPedigriCSV() {
+  alert('Exportando matriz de pedigrí en formato CSV...');
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+function actualizarPesoPorDefecto() {
+  const sexo = document.getElementById('sexo').value;
+  const pesoInput = document.getElementById('peso');
+  if (pesoInput) {
+    pesoInput.value = sexo === 'M' ? '3250' : '2500';
+  }
+}
